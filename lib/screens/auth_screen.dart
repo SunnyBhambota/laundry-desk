@@ -204,6 +204,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ]),
+                  if (_login)
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => _staffLogin(context),
+                        icon: const Icon(Icons.badge_outlined, size: 18, color: LD.navy),
+                        label: Text(t('staffLogin'), style: const TextStyle(color: LD.navy, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
                   if (!AuthService.instance.cloud)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
@@ -216,6 +224,60 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _staffLogin(BuildContext context) {
+    final app = context.read<AppState>();
+    final t = app.t;
+    final code = TextEditingController();
+    final mobile = TextEditingController();
+    final pin = TextEditingController();
+    var busy = false;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: LD.glossBase,
+      builder: (c) => StatefulBuilder(
+        builder: (c, set) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(c).viewInsets.bottom + 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(t('staffLogin'), style: heading(22)),
+            const SizedBox(height: 4),
+            Text(t('staffLoginSub'), style: const TextStyle(color: LD.slate)),
+            const SizedBox(height: 14),
+            GlassField(controller: code, hint: t('shopCode'), icon: Icons.storefront_outlined),
+            const SizedBox(height: 10),
+            GlassField(controller: mobile, hint: t('mobile'), prefixText: '+91', keyboard: TextInputType.phone),
+            const SizedBox(height: 10),
+            GlassField(controller: pin, hint: t('pin'), icon: Icons.pin_outlined, obscure: true, keyboard: TextInputType.number, action: TextInputAction.done),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: LD.navy, shape: const StadiumBorder()),
+                onPressed: busy
+                    ? null
+                    : () async {
+                        set(() => busy = true);
+                        final err = await app.staffLogin(code: code.text, mobile: mobile.text, pin: pin.text.trim());
+                        if (!c.mounted) return;
+                        set(() => busy = false);
+                        if (err == null) {
+                          Navigator.pop(c);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t(err))));
+                        }
+                      },
+                child: busy
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                    : Text(t('logIn'), style: heading(16, weight: FontWeight.w700, color: Colors.white)),
+              ),
+            ),
+          ]),
         ),
       ),
     );

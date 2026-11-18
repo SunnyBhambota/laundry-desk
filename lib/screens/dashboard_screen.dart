@@ -2,12 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../data/ops_models.dart';
+import '../data/reports.dart';
+import '../data/shop_data.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/ui.dart';
+import 'admin_screens.dart';
+import 'customers_screen.dart';
+import 'delivery_screen.dart';
+import 'new_order_screen.dart';
+import 'orders_screen.dart';
+import 'reports_screen.dart';
+import 'staff_screen.dart';
 
-/// Owner admin dashboard (canvas: "Owner – Admin dashboard").
-/// v0.1 shows the real shop with zero orders; orders/staff arrive in v0.2.
+/// Owner / manager / counter home (canvas: "Owner – Admin dashboard").
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -16,76 +26,73 @@ class DashboardScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     final t = app.t;
     final shop = app.shop!;
-    final owner = app.owner!;
-    final sym = AppConfig.currencySymbols[shop.currency] ?? '${shop.currency} ';
+    final d = app.data!;
+    final cur = shop.currency;
+    final scope = app.scopeBranch;
+    final today = Report(orders: d.orders, expenses: d.expenses, range: DateRange.of(Period.today), branchId: scope);
+    final scoped = d.ordersIn(scope).toList();
     final days = shop.trialDaysLeft(AppConfig.trialDays);
     final hour = DateTime.now().hour;
     final greet = hour < 12 ? t('goodMorning') : (hour < 17 ? t('goodAfternoon') : t('goodEvening'));
-    final firstName = owner.name.split(' ').first;
+    final firstName = app.actorName.split(' ').first;
     final modules = [...AppConfig.freeModules, ...AppConfig.premiumModules];
+    final late = scoped.where((o) => o.late).length;
+    final ready = scoped.where((o) => o.status == 'ready').length;
+    final out = scoped.where((o) => o.status == 'out').length;
+    final pickupsToday = scoped.where((o) => o.status == 'pickup').length;
+    final dueTotal = scoped.where((o) => o.status != 'cancelled').fold<double>(0, (s, o) => s + o.due);
+    final dueCustomers = scoped.where((o) => o.status != 'cancelled' && o.due > 0).map((o) => o.customerId).toSet().length;
+    final stages = ['pickup', 'received', 'washing', 'ready', 'out', 'delivered'];
+    final counts = {for (final s in stages) s: scoped.where((o) => o.status == s && (s != 'delivered' || DateRange.of(Period.today).has(o.timeOf('delivered') ?? DateTime(2000)))).length};
+    final pipeTotal = counts.values.fold<int>(0, (a, b) => a + b);
+    final branchName = scope == null ? '${t('allBranches')} (${d.branches.length})' : (d.branch(scope)?.name ?? '');
+    void go(Widget w) => Navigator.push(context, MaterialPageRoute(builder: (_) => w));
 
-    Widget card({required Widget child, EdgeInsets padding = const EdgeInsets.all(16)}) => Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white,
+    Widget kpi(String label, String value, String note, Color noteColor, VoidCallback onTap) => Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: LD.line)),
+          elevation: 0,
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: LD.line),
-          ),
-          child: child,
-        );
-
-    Widget title(String text, [Widget? action]) => Row(children: [
-          Expanded(child: Text(text, style: heading(16, weight: FontWeight.w700))),
-          if (action != null) action,
-        ]);
-
-    Widget kpi(String label, String value, String note, Color noteColor) => Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: LD.line),
-            boxShadow: const [BoxShadow(color: Color(0x0F0F2340), blurRadius: 14, offset: Offset(0, 4))],
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LD.slate)),
-            const SizedBox(height: 6),
-            Text(value, style: heading(22)),
-            const SizedBox(height: 4),
-            Text(note, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: noteColor)),
-          ]),
-        );
-
-    Widget quick(IconData icon, String label) => Expanded(
-          child: Material(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: LD.line)),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () => toast(context, t('soon')),
-              child: SizedBox(
-                height: 78,
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(color: const Color(0xFFE6EEFC), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(icon, size: 20, color: LD.primary),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                ]),
-              ),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LD.slate)),
+                const SizedBox(height: 6),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(value, style: heading(22))),
+                const SizedBox(height: 4),
+                Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: noteColor)),
+              ]),
             ),
           ),
         );
 
-    const stages = ['received', 'washing', 'ready', 'out', 'delivered'];
+    Widget quick(IconData icon, String label, VoidCallback onTap) => Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: LD.line)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: const Color(0xFFE6EEFC), borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, size: 20, color: LD.primary),
+              ),
+              const SizedBox(height: 6),
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        );
+
+    final staffList = d.staff.where((s) => s.active && (scope == null || s.branchId == scope)).toList()
+      ..sort((a, b) => d.actionsToday(b.id).compareTo(d.actionsToday(a.id)));
 
     return Scaffold(
       backgroundColor: LD.mist,
       body: ListView(padding: EdgeInsets.zero, children: [
-        // header
         Container(
           color: LD.navy,
           padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 18, 20, 74),
@@ -96,15 +103,27 @@ class DashboardScreen extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(shop.shopName, style: heading(16, color: Colors.white), overflow: TextOverflow.ellipsis),
-                  const Text('Owner · Admin', style: TextStyle(fontSize: 12, color: Color(0xFFC9D6EA))),
+                  Text(app.isOwner ? 'Owner · Admin' : roleLabel(app.role, t), style: const TextStyle(fontSize: 12, color: Color(0xFFC9D6EA))),
                 ]),
               ),
-              IconButton(
-                tooltip: 'Notifications',
-                onPressed: () => toast(context, t('soon')),
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12)),
-                icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
-              ),
+              Stack(children: [
+                IconButton(
+                  tooltip: t('late'),
+                  onPressed: () => go(const OrdersScreen(initialFilter: 'late')),
+                  style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12)),
+                  icon: const Icon(Icons.notifications_none_rounded, color: Colors.white),
+                ),
+                if (late > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(color: const Color(0xFFE8742A), borderRadius: BorderRadius.circular(99)),
+                      child: Text('$late', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+              ]),
             ]),
             const SizedBox(height: 16),
             Text(_date(DateTime.now()), style: const TextStyle(fontSize: 13, color: Color(0xFFC9D6EA))),
@@ -112,28 +131,42 @@ class DashboardScreen extends StatelessWidget {
             Text('$greet, $firstName', style: heading(24, color: Colors.white)),
             const SizedBox(height: 14),
             Row(children: [
-              Container(
-                constraints: const BoxConstraints(minHeight: 40),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .08),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.white.withValues(alpha: .25)),
+              PopupMenuButton<String>(
+                enabled: app.isOwner && d.branches.length > 1,
+                onSelected: (v) => app.setBranchFilter(v == '*' ? null : v),
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: '*', child: Text('${t('allBranches')} (${d.branches.length})')),
+                  for (final b in d.branches) PopupMenuItem(value: b.id, child: Text(b.name)),
+                ],
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .08),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white.withValues(alpha: .25)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.store_mall_directory_outlined, size: 16, color: LD.aqua),
+                    const SizedBox(width: 8),
+                    Text(branchName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                    if (app.isOwner && d.branches.length > 1) const Icon(Icons.expand_more_rounded, color: Colors.white, size: 18),
+                  ]),
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.store_mall_directory_outlined, size: 16, color: LD.aqua),
-                  const SizedBox(width: 8),
-                  Text('${t('allBranches')} (1)',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                ]),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: LD.sun, borderRadius: BorderRadius.circular(999)),
-                child: Text(t('trialLeft').replaceAll('{n}', '$days'),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: LD.navy)),
-              ),
+              if (app.isOwner)
+                InkWell(
+                  onTap: () => go(const PlansScreen()),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: LD.sun, borderRadius: BorderRadius.circular(999)),
+                    child: Text(
+                      d.plan == 'trial' ? t('trialLeft').replaceAll('{n}', '$days') : d.plan.toUpperCase(),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: LD.navy),
+                    ),
+                  ),
+                ),
             ]),
           ]),
         ),
@@ -151,145 +184,248 @@ class DashboardScreen extends StatelessWidget {
                 childAspectRatio: 1.45,
                 padding: EdgeInsets.zero,
                 children: [
-                  kpi(t('todayCollection'), '${sym}0', t('noneYet'), LD.slate),
-                  kpi(t('newOrders'), '0', t('noneYet'), LD.slate),
-                  kpi(t('pendingUdhaar'), '${sym}0', '—', const Color(0xFF8A5A00)),
-                  kpi(t('readyDeliver'), '0', '—', const Color(0xFFA8430F)),
+                  kpi(t('todayCollection'), money(today.collected, cur), '${d.ordersIn(scope).expand((o) => o.payments).where((p) => DateRange.of(Period.today).has(p.at)).length} ${t('payments').toLowerCase()}',
+                      const Color(0xFF146C43), app.canManage ? () => go(const ReportsScreen()) : () {}),
+                  kpi(t('newOrders'), '${today.orderCount}', '${today.pieces} ${t('pcs')} · $pickupsToday ${t('pickups').toLowerCase()}', LD.slate,
+                      () => go(const OrdersScreen(initialFilter: 'all'))),
+                  kpi(t('pendingUdhaar'), money(dueTotal, cur), '$dueCustomers ${t('customers').toLowerCase()}', const Color(0xFF8A5A00),
+                      () => go(const CustomersScreen())),
+                  kpi(t('readyDeliver'), '$ready', '$out ${t('out').toLowerCase()}', const Color(0xFFA8430F),
+                      () => go(const OrdersScreen(initialFilter: 'ready'))),
+                ],
+              ),
+              if (d.hasSample) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
+                  child: Row(children: [
+                    const Icon(Icons.science_outlined, size: 18, color: Color(0xFF5B3FC4)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(t('sampleBanner'), style: const TextStyle(fontSize: 12, color: Color(0xFF5B3FC4)))),
+                  ]),
+                ),
+              ],
+              const SizedBox(height: 16),
+              GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: .95,
+                padding: EdgeInsets.zero,
+                children: [
+                  quick(Icons.add_rounded, t('qOrder'), () => go(const NewOrderScreen())),
+                  quick(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
+                  quick(Icons.delivery_dining_outlined, t('delivery'),
+                      app.module('delivery') ? () => go(const DeliveryBoardScreen()) : () => toast(context, t('moduleOff'))),
+                  quick(Icons.list_alt_rounded, t('qRates'), () => go(const RateCardScreen())),
+                  if (app.canManage) ...[
+                    quick(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
+                    quick(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
+                    quick(Icons.groups_outlined, t('staff'), () => go(const StaffScreen())),
+                    quick(Icons.store_mall_directory_outlined, t('branches'), () => go(const BranchesScreen())),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
-              Row(children: [
-                quick(Icons.add_rounded, t('qOrder')),
-                const SizedBox(width: 8),
-                quick(Icons.person_add_alt_1_outlined, t('qCustomer')),
-                const SizedBox(width: 8),
-                quick(Icons.currency_rupee_rounded, t('qPayment')),
-                const SizedBox(width: 8),
-                quick(Icons.list_alt_rounded, t('qRates')),
-              ]),
-              const SizedBox(height: 16),
-              card(
+              SectionCard(
+                title: t('pipeline'),
+                action: TextButton(onPressed: () => go(const OrdersScreen()), child: Text(t('all'))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  title(t('pipeline')),
-                  const SizedBox(height: 14),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(99),
-                    child: Container(height: 12, color: const Color(0xFFEDF0F4)),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final s in stages)
-                    SizedBox(
-                      height: 36,
-                      child: Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: LD.statusColors[s]![0], borderRadius: BorderRadius.circular(99)),
-                          child: Text(t(s),
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: LD.statusColors[s]![1])),
-                        ),
-                        const Spacer(),
-                        const Text('0', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                      ]),
+                    child: SizedBox(
+                      height: 12,
+                      child: pipeTotal == 0
+                          ? Container(color: const Color(0xFFEDF0F4))
+                          : Row(children: [
+                              for (final s in stages)
+                                if (counts[s]! > 0)
+                                  Expanded(
+                                    flex: counts[s]!,
+                                    child: Container(margin: const EdgeInsets.only(right: 2), color: _barColor(s)),
+                                  ),
+                            ]),
                     ),
-                ]),
-              ),
-              const SizedBox(height: 16),
-              card(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  title(
-                    t('branchesToday'),
-                    TextButton(onPressed: () => toast(context, t('soon')), child: Text(t('addBranch'))),
                   ),
-                  const Divider(color: Color(0xFFEDF1F6)),
-                  Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(shop.address.isEmpty ? t('mainBranch') : shop.address,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                        const SizedBox(height: 2),
-                        Text(t('ordersStaff').replaceAll('{o}', '0').replaceAll('{s}', '0'),
-                            style: const TextStyle(fontSize: 12, color: LD.slate)),
-                      ]),
-                    ),
-                    Text('${sym}0', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  ]),
-                ]),
-              ),
-              const SizedBox(height: 16),
-              card(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  title(t('staffActivity')),
                   const SizedBox(height: 8),
-                  Text(t('noStaff'), style: const TextStyle(color: LD.slate, height: 1.5, fontSize: 13)),
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () => toast(context, t('soon')),
-                      icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
-                      label: Text(t('addStaff')),
-                    ),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 16),
-              card(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  title(
-                    t('modules'),
-                    Text(t('modulesOn').replaceAll('{n}', '${modules.length}').replaceAll('{t}', '${modules.length}'),
-                        style: const TextStyle(fontSize: 12, color: LD.slate)),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    for (final m in modules)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: AppConfig.premiumModules.contains(m) ? const Color(0xFFFFF4D6) : const Color(0xFFE6EEFC),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (AppConfig.premiumModules.contains(m)) ...[
-                            const Icon(Icons.star_rounded, size: 14, color: Color(0xFF8A5A00)),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(t('m.$m'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppConfig.premiumModules.contains(m) ? const Color(0xFF8A5A00) : const Color(0xFF1F4FB0),
-                              )),
+                  for (final s in stages)
+                    InkWell(
+                      onTap: () => go(OrdersScreen(initialFilter: s)),
+                      child: SizedBox(
+                        height: 38,
+                        child: Row(children: [
+                          StatusChip(s),
+                          if (s == 'delivered') Text('  ${t('today')}', style: const TextStyle(fontSize: 11, color: LD.slate)),
+                          const Spacer(),
+                          Text('${counts[s]}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          const Icon(Icons.chevron_right_rounded, color: LD.slate, size: 20),
                         ]),
                       ),
-                  ]),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: LD.navy, borderRadius: BorderRadius.circular(14)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Text(t('trialEnds').replaceAll('{n}', '$days'), style: heading(16, color: Colors.white)),
-                      const SizedBox(height: 8),
-                      Text(t('trialBody'), style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFFC9D6EA))),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: LD.sun,
-                          foregroundColor: LD.navy,
-                          minimumSize: const Size.fromHeight(46),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () => toast(context, t('soon')),
-                        child: Text(t('choosePlan'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ]),
-                  ),
+                    ),
                 ]),
               ),
+              if (app.isOwner && scope == null) ...[
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: t('branchesToday'),
+                  action: TextButton(onPressed: () => go(const BranchesScreen()), child: Text(t('addBranch'))),
+                  child: Column(children: [
+                    for (final b in d.branches)
+                      InkWell(
+                        onTap: () => app.setBranchFilter(b.id),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(children: [
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(b.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t('ordersStaff')
+                                      .replaceAll('{o}', '${today.booked.where((o) => o.branchId == b.id).length}')
+                                      .replaceAll('{s}', '${d.staff.where((s) => s.active && s.branchId == b.id && d.todayAttendance(s.id) != null && d.todayAttendance(s.id)!.outAt == null).length}'),
+                                  style: const TextStyle(fontSize: 12, color: LD.slate),
+                                ),
+                              ]),
+                            ),
+                            Text(money(today.branchSales[b.id] ?? 0, cur), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                ),
+              ],
+              if (app.canManage) ...[
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: t('staffActivity'),
+                  action: TextButton(onPressed: () => go(const StaffScreen()), child: Text(t('staff'))),
+                  child: staffList.isEmpty
+                      ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(t('noStaff'), style: const TextStyle(color: LD.slate, height: 1.5, fontSize: 13)),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => go(const StaffScreen()),
+                            icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                            label: Text(t('addStaff')),
+                          ),
+                        ])
+                      : Column(children: [
+                          for (final s in staffList.take(5))
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(children: [
+                                Avatar(s.initials, color: avatarColor(s.id)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(s.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                    Text('${roleLabel(s.role, t)} · ${d.branch(s.branchId)?.name ?? ''}', style: const TextStyle(fontSize: 12, color: LD.slate)),
+                                    Text(_work(d, s, t), style: const TextStyle(fontSize: 12)),
+                                  ]),
+                                ),
+                                _duty(d, s, t),
+                              ]),
+                            ),
+                        ]),
+                ),
+              ],
+              if (app.isOwner) ...[
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: t('modules'),
+                  action: Text(
+                    t('modulesOn').replaceAll('{n}', '${modules.where(app.module).length}').replaceAll('{t}', '${modules.length}'),
+                    style: const TextStyle(fontSize: 12, color: LD.slate),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final m in modules)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: !app.module(m)
+                                ? const Color(0xFFEDF0F4)
+                                : (AppConfig.premiumModules.contains(m) ? const Color(0xFFFFF4D6) : const Color(0xFFE6EEFC)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (AppConfig.premiumModules.contains(m)) ...[
+                              const Icon(Icons.star_rounded, size: 14, color: Color(0xFF8A5A00)),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(t('m.$m'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: app.module(m) ? null : TextDecoration.lineThrough,
+                                  color: AppConfig.premiumModules.contains(m) ? const Color(0xFF8A5A00) : const Color(0xFF1F4FB0),
+                                )),
+                          ]),
+                        ),
+                    ]),
+                    if (d.plan == 'trial' || d.plan == 'free') ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: LD.navy, borderRadius: BorderRadius.circular(14)),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Text(t('trialEnds').replaceAll('{n}', '$days'), style: heading(16, color: Colors.white)),
+                          const SizedBox(height: 8),
+                          Text(t('trialBody'), style: const TextStyle(fontSize: 13, height: 1.5, color: Color(0xFFC9D6EA))),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: LD.sun,
+                              foregroundColor: LD.navy,
+                              minimumSize: const Size.fromHeight(46),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => go(const PlansScreen()),
+                            child: Text(t('choosePlan'), style: const TextStyle(fontWeight: FontWeight.w700)),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ]),
+                ),
+              ],
             ]),
           ),
         ),
       ]),
+    );
+  }
+
+  static Color _barColor(String s) => const {
+        'pickup': Color(0xFF9B87F5),
+        'received': Color(0xFF1F5FD1),
+        'washing': Color(0xFF3CC6D8),
+        'ready': Color(0xFF22A06B),
+        'out': Color(0xFFE8742A),
+        'delivered': Color(0xFF9AA6B6),
+      }[s]!;
+
+  static String _work(ShopData d, Staff s, String Function(String) t) {
+    final a = d.todayAttendance(s.id);
+    final n = d.actionsToday(s.id);
+    final when = a == null ? t('absent') : t('inAt').replaceAll('{t}', hm(a.inAt));
+    return '$when · ${t('actionsToday').replaceAll('{n}', '$n')}';
+  }
+
+  static Widget _duty(ShopData d, Staff s, String Function(String) t) {
+    final a = d.todayAttendance(s.id);
+    final on = a != null && a.outAt == null;
+    final bg = a == null ? const Color(0xFFEDF0F4) : (on ? const Color(0xFFDCF5E8) : const Color(0xFFE6EEFC));
+    final fg = a == null ? const Color(0xFF475569) : (on ? const Color(0xFF146C43) : const Color(0xFF1F4FB0));
+    final label = a == null ? t('absent') : (on ? t('onDuty') : t('offDuty'));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
+      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 

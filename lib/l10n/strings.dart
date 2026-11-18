@@ -1,3 +1,5 @@
+import 'strings_ops.dart';
+
 /// English (default) and Hindi text. Missing Hindi falls back to English.
 class S {
   S._();
@@ -61,7 +63,7 @@ class S {
     'country': 'Country',
     'currency': 'Currency',
     'address': 'Main shop address / city',
-    'pickup': 'I offer pickup & home delivery',
+    'pickupOffer': 'I offer pickup & home delivery',
     'gst': 'I charge GST / tax on bills',
     'referral': 'Referral / partner code (optional)',
     'finish': 'Finish setup',
@@ -185,7 +187,7 @@ class S {
     'country': 'देश',
     'currency': 'करेंसी',
     'address': 'मुख्य दुकान का पता / शहर',
-    'pickup': 'मैं पिकअप और होम डिलीवरी देता हूँ',
+    'pickupOffer': 'मैं पिकअप और होम डिलीवरी देता हूँ',
     'gst': 'मैं बिल पर GST / टैक्स लगाता हूँ',
     'referral': 'रेफ़रल / पार्टनर कोड (ज़रूरी नहीं)',
     'finish': 'सेटअप पूरा करें',
@@ -251,7 +253,7 @@ class S {
   };
 
   static String of(String lang, String key) {
-    if (lang == 'hi') return hi[key] ?? en[key] ?? key;
-    return en[key] ?? key;
+    if (lang == 'hi') return hi[key] ?? opsHi[key] ?? en[key] ?? opsEn[key] ?? key;
+    return en[key] ?? opsEn[key] ?? key;
   }
 }

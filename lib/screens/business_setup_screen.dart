@@ -25,6 +25,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
   String _country = 'India';
   bool _pickup = true;
   bool _gst = false;
+  bool _sample = true;
   bool _saving = false;
 
   @override
@@ -57,7 +58,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
       pickupDelivery: _pickup,
       gst: _gst,
       referral: _referral.text.trim(),
-    ));
+    ), sample: _sample);
   }
 
   @override
@@ -177,8 +178,9 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                 border: Border.all(color: LD.line),
               ),
               child: Column(children: [
-                sw(t('pickup'), _pickup, (v) => _pickup = v),
+                sw(t('pickupOffer'), _pickup, (v) => _pickup = v),
                 sw(t('gst'), _gst, (v) => _gst = v),
+                sw(t('sampleOn'), _sample, (v) => _sample = v),
               ]),
             ),
             const SizedBox(height: 14),

@@ -24,6 +24,16 @@ class AppConfig {
   /// Testing: everything open. Set true before Play Store launch.
   static const enforcePremium = false;
 
+  /// Suggested prices in ₹: Monthly, 6 months, 1 year (owner to approve).
+  /// For comparison, Indian laundry software lists ₹1,499–₹2,499 per month.
+  static const planPrices = <String, List<int>>{
+    'pro': [499, 2499, 4499],
+    'business': [999, 4999, 8999],
+  };
+
+  /// BrotriX admin screen (More → tap the version 7 times). Change before launch.
+  static const superAdminPin = '2468';
+
   /// Modules. Free ones stay on after the trial; the rest need a plan.
   static const freeModules = ['orders', 'customers', 'bills', 'basicReports'];
   static const premiumModules = [
