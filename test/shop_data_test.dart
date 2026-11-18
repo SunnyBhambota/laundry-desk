@@ -96,7 +96,7 @@ void main() {
     final r = Report(orders: d.orders, expenses: d.expenses, range: DateRange.of(Period.today));
     expect(r.orderCount, 1);
     expect(r.collected, 236);
-    expect(r.byMode['cash'], 136);
+    expect(r.byMode['cash'], 236); // advance (cash) + rest (cash)
     final back = await ShopData.open('local_test');
     // saved after the debounce or on demand
     d.save(now: true);
