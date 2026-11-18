@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
 import '../data/reports.dart';
+import '../services/export_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
@@ -58,9 +61,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
         title: Text(t('reports')),
         actions: [
           IconButton(
-            tooltip: t('shareSummary'),
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () => openWhatsApp('', _summary(app, r, cur)),
+            tooltip: t('printReport'),
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () async => ExportService.printPdf(await _pdf(app, r), 'Report'),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              final label = _label(t);
+              if (v == 'pdf') ExportService.sharePdf(await _pdf(app, r), 'laundry-report-$label.pdf');
+              if (v == 'wa') openWhatsApp('', _summary(app, r, cur));
+              if (v == 'orders') {
+                ExportService.shareCsv(
+                    ExportService.ordersCsv(d, d.ordersIn(app.scopeBranch).where((o) => r.range.has(o.createdAt))), 'orders-$label.csv');
+              }
+              if (v == 'customers') ExportService.shareCsv(ExportService.customersCsv(d), 'customers.csv');
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'pdf', child: Text(t('sharePdf'))),
+              PopupMenuItem(value: 'orders', child: Text(t('csvOrders'))),
+              PopupMenuItem(value: 'customers', child: Text(t('csvCustomers'))),
+              PopupMenuItem(value: 'wa', child: Text(t('shareSummary'))),
+            ],
           ),
         ],
       ),
@@ -145,6 +166,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ]),
     );
   }
+
+  String _label(String Function(String) t) =>
+      t(const {Period.today: 'today', Period.week: 'week', Period.month: 'month', Period.all: 'allTime'}[_p]!);
+
+  Future<Uint8List> _pdf(AppState app, Report r) =>
+      ExportService.reportPdf(shop: app.shop!, data: app.data!, r: r, periodLabel: _label(app.t), branchId: app.scopeBranch);
 
   String _summary(AppState app, Report r, String cur) {
     final t = app.t;

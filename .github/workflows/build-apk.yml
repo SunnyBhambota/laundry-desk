@@ -33,8 +33,10 @@ jobs:
           sed -i 's/android:label="laundry_desk"/android:label="Laundry Desk"/' "$M"
           # WhatsApp / phone / maps links (url_launcher) on Android 11+
           grep -q '<queries>' "$M" && sed -i 's#<queries>#<queries>\n        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>\n        <intent><action android:name="android.intent.action.DIAL" /><data android:scheme="tel" /></intent>#' "$M"
+          # GPS for delivery tracking, internet for cloud + fonts
+          sed -i '0,/<application/s##<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <application#' "$M"
           grep -n "minSdk" "$F"
-          grep -n "label\|queries" "$M"
+          grep -n "label\|queries\|permission" "$M"
 
       - name: Use the app's fixed signing key (same SHA-1 every build, for Firebase)
         run: |

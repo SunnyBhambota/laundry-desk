@@ -176,6 +176,21 @@ class SampleData {
         at: now.subtract(Duration(days: (i * 3) % 28)),
       ));
     }
+    // GPS trail of the two delivery staff today (Andheri / Bandra, Mumbai)
+    final starts = {'demo_s4': [19.1364, 72.8296], 'demo_s5': [19.0596, 72.8295]};
+    starts.forEach((id, ll) {
+      final pts = <Ping>[];
+      for (var i = 0; i < 18; i++) {
+        final at = now.subtract(Duration(minutes: (18 - i) * 12));
+        if (at.day != now.day) continue;
+        pts.add(Ping(lat: ll[0] + i * .0011 + r.nextDouble() * .0006, lng: ll[1] + (i.isEven ? 1 : -1) * r.nextDouble() * .0012 + i * .0004, at: at));
+      }
+      d.pings[id] = pts;
+    });
+    for (final o in d.orders.where((o) => o.homeDelivery && o.status == 'delivered')) {
+      final ll = starts[o.deliveryAgent] ?? starts.values.first;
+      o.proof = Ping(lat: ll[0] + r.nextDouble() * .02, lng: ll[1] + r.nextDouble() * .02, at: o.timeOf('delivered')!, orderId: o.id);
+    }
     d.hasSample = true;
     d.changed();
   }

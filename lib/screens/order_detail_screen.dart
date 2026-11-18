@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
 import '../logic/messages.dart';
+import '../services/export_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -42,15 +43,31 @@ class OrderDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(o.code),
         actions: [
-          if (app.canManage && o.open)
-            PopupMenuButton<String>(
-              onSelected: (v) async {
-                if (v == 'cancel' && await confirm(context, t('cancelOrder'), t('cancelSure'), ok: t('cancelOrder'), danger: true)) {
-                  d.setStatus(o, 'cancelled', by: app.actorId);
-                }
-              },
-              itemBuilder: (_) => [PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder')))],
-            ),
+          IconButton(
+            tooltip: t('printBill'),
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () async => ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o), 'Bill ${o.code}'),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              if (v == 'share') {
+                ExportService.sharePdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'bill-${o.code}.pdf');
+              } else if (v == 'a5') {
+                ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'Bill ${o.code}');
+              } else if (v == 'tags') {
+                ExportService.printPdf(await ExportService.tagsPdf(shop: app.shop!, data: d, o: o), 'Tags ${o.code}');
+              } else if (v == 'cancel' && context.mounted &&
+                  await confirm(context, t('cancelOrder'), t('cancelSure'), ok: t('cancelOrder'), danger: true)) {
+                d.setStatus(o, 'cancelled', by: app.actorId);
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
+              PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
+              if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
+              if (app.canManage && o.open) PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder'))),
+            ],
+          ),
         ],
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 120), children: [
@@ -148,6 +165,8 @@ class OrderDetailScreen extends StatelessWidget {
               _kv(Icons.delivery_dining_outlined, t('deliveryBy'), o.deliveryAgent.isEmpty ? t('notAssigned') : d.nameOf(o.deliveryAgent),
                   onTap: app.canManage || app.role == Role.counter ? () => _assign(context, o, pickup: false) : null),
             ],
+            if (o.proof != null)
+              _kv(Icons.verified_outlined, t('proof'), '${whenText(o.proof!.at)} · ${t('map')}', onTap: () => openUrl(o.proof!.mapUrl)),
             if (o.notes.isNotEmpty) _kv(Icons.sticky_note_2_outlined, t('notes'), o.notes),
           ]),
         ),

@@ -563,6 +563,21 @@ class SettingsScreen extends StatelessWidget {
           ]),
         ),
         const SizedBox(height: 12),
+        SectionCard(
+          title: t('security'),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(app.lockOn ? Icons.lock_outline : Icons.lock_open_outlined, color: app.lockOn ? LD.success : LD.slate),
+              title: Text(t('appLock')),
+              subtitle: Text(t('appLockSub')),
+              trailing: Text(app.lockOn ? 'ON' : 'OFF', style: const TextStyle(fontWeight: FontWeight.w800)),
+              onTap: () => _lockSheet(context, app),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 12),
         if (d.hasSample)
           SectionCard(
             title: t('sample'),
@@ -578,4 +593,54 @@ class SettingsScreen extends StatelessWidget {
       ]),
     );
   }
+}
+
+void _lockSheet(BuildContext context, AppState app) {
+  final t = app.t;
+  final a = TextEditingController();
+  final b = TextEditingController();
+  var err = '';
+  sheet(context, t('appLock'), (c) => StatefulBuilder(builder: (c, set) {
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextField(
+            controller: a,
+            obscureText: true,
+            maxLength: 4,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: fieldDeco(t('newPin'), icon: Icons.pin_outlined),
+          ),
+          TextField(
+            controller: b,
+            obscureText: true,
+            maxLength: 4,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: fieldDeco(t('confirmPin'), icon: Icons.pin_outlined),
+          ),
+          if (err.isNotEmpty) Text(err, style: const TextStyle(color: Color(0xFFB42318))),
+          const SizedBox(height: 10),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            onPressed: () {
+              if (a.text.length != 4 || a.text != b.text) {
+                set(() => err = t('pinMismatch'));
+                return;
+              }
+              app.setLockPin(a.text);
+              Navigator.pop(c);
+              toast(context, t('lockSet'));
+            },
+            child: Text(t('save')),
+          ),
+          if (app.lockOn)
+            TextButton(
+              onPressed: () {
+                app.setLockPin(null);
+                Navigator.pop(c);
+              },
+              child: Text(t('lockRemove')),
+            ),
+        ]);
+      }));
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
 import '../logic/messages.dart';
+import '../services/tracking_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
@@ -33,29 +34,45 @@ class DeliveryBoardScreen extends StatelessWidget {
         body: Column(children: [
           if (agents.isNotEmpty)
             SizedBox(
-              height: 92,
+              height: 100,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
                 children: [
                   for (final s in agents) ...[
-                    Container(
-                      width: 170,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: LD.line)),
-                      child: Row(children: [
-                        Avatar(s.initials, color: avatarColor(s.id), size: 34),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                            Text(
-                              '${scoped.where((o) => o.open && (o.deliveryAgent == s.id || o.pickupAgent == s.id) && (o.status == 'out' || o.status == 'pickup' || o.status == 'ready')).length} · ${d.todayAttendance(s.id) == null ? t('absent') : t('onDuty')}',
-                              style: const TextStyle(fontSize: 11, color: LD.slate),
-                            ),
-                          ]),
-                        ),
-                      ]),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => trailSheet(context, s),
+                      child: Container(
+                        width: 190,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: LD.line)),
+                        child: Row(children: [
+                          Avatar(s.initials, color: avatarColor(s.id), size: 34),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                              Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                              Text(
+                                '${scoped.where((o) => o.open && (o.deliveryAgent == s.id || o.pickupAgent == s.id) && (o.status == 'out' || o.status == 'pickup' || o.status == 'ready')).length} · ${d.todayAttendance(s.id) == null ? t('absent') : t('onDuty')}',
+                                style: const TextStyle(fontSize: 11, color: LD.slate),
+                              ),
+                              Row(children: [
+                                Icon(Icons.location_on, size: 12, color: d.lastPing(s.id) == null ? LD.slate : LD.success),
+                                const SizedBox(width: 2),
+                                Flexible(
+                                  child: Text(
+                                    d.lastPing(s.id) == null ? t('noLocation') : t('seenAt').replaceAll('{t}', hm(d.lastPing(s.id)!.at)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ]),
+                            ]),
+                          ),
+                        ]),
+                      ),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -149,7 +166,10 @@ class TaskCard extends StatelessWidget {
           if (pickup && order.status == 'pickup')
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: LD.navy),
-              onPressed: () => d.setStatus(order, 'received', by: app.actorId),
+              onPressed: () {
+                d.setStatus(order, 'received', by: app.actorId);
+                if (isAgent) TrackingService.instance.proof(d, order, app.actorId);
+              },
               icon: const Icon(Icons.inventory_2_outlined, size: 18),
               label: Text(t('pickedUp')),
             ),
@@ -175,6 +195,7 @@ class TaskCard extends StatelessWidget {
                   if (paid == null) return;
                 }
                 d.setStatus(order, 'delivered', by: app.actorId);
+                if (isAgent) TrackingService.instance.proof(d, order, app.actorId);
               },
               icon: const Icon(Icons.check_rounded, size: 18),
               label: Text(t('deliveredBtn')),
@@ -204,6 +225,8 @@ class MyTasksScreen extends StatelessWidget {
       appBar: AppBar(title: Text(t('myTasks'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         _DutyCard(),
+        const SizedBox(height: 10),
+        _TrackingBanner(),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(child: _stat(t('pickups'), '${pickups.length}')),
@@ -324,4 +347,90 @@ class _DutyCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+class _TrackingBanner extends StatefulWidget {
+  @override
+  State<_TrackingBanner> createState() => _TrackingBannerState();
+}
+
+class _TrackingBannerState extends State<_TrackingBanner> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final t = app.t;
+    final last = app.data!.lastPing(app.actorId);
+    final on = TrackingService.instance.running && !TrackingService.instance.denied;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: on ? const Color(0xFFDCF5E8) : const Color(0xFFFFF4D6), borderRadius: BorderRadius.circular(14)),
+      child: Row(children: [
+        Icon(on ? Icons.my_location : Icons.location_disabled_outlined, color: on ? const Color(0xFF146C43) : const Color(0xFF8A5A00)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            '${on ? t('trackingOn') : t('trackingOff')}${last == null ? '' : ' · ${t('seenAt').replaceAll('{t}', hm(last.at))}'}',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: on ? const Color(0xFF146C43) : const Color(0xFF8A5A00)),
+          ),
+        ),
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () async {
+                  setState(() => _busy = true);
+                  final p = await TrackingService.instance.current();
+                  if (p != null) app.data!.addPing(app.actorId, p);
+                  if (!TrackingService.instance.running) await TrackingService.instance.start(app.data!, app.actorId);
+                  if (mounted) setState(() => _busy = false);
+                },
+          child: Text(t('shareLocation')),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Owner: today's GPS trail of one delivery person.
+void trailSheet(BuildContext context, Staff s) {
+  final app = context.read<AppState>();
+  final d = app.data!;
+  final t = app.t;
+  final today = dayKey(DateTime.now());
+  final pts = (d.pings[s.id] ?? const <Ping>[]).where((p) => dayKey(p.at) == today).toList().reversed.toList();
+  sheet(context, s.name, (c) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('${t('trail')} · ${pts.length}', style: const TextStyle(color: LD.slate)),
+        const SizedBox(height: 8),
+        if (pts.isNotEmpty)
+          FilledButton.icon(
+            onPressed: () => openUrl(_routeUrl(pts.reversed.toList())),
+            icon: const Icon(Icons.route_outlined),
+            label: Text(t('routeMap')),
+          ),
+        const SizedBox(height: 8),
+        if (pts.isEmpty) Text(t('noLocation'), style: const TextStyle(color: LD.slate)),
+        for (final p in pts.take(40))
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(p.orderId.isEmpty ? Icons.location_on_outlined : Icons.verified_outlined,
+                color: p.orderId.isEmpty ? LD.primary : LD.success),
+            title: Text(p.orderId.isEmpty ? hm(p.at) : '${hm(p.at)} · ${d.order(p.orderId)?.code ?? ''} ${t('proof')}'),
+            subtitle: Text('${p.lat.toStringAsFixed(5)}, ${p.lng.toStringAsFixed(5)}'),
+            trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+            onTap: () => openUrl(p.mapUrl),
+          ),
+      ]));
+}
+
+/// Google Maps directions through up to 10 points of the trail.
+String _routeUrl(List<Ping> pts) {
+  final step = (pts.length / 10).ceil().clamp(1, 1000);
+  final picked = [for (var i = 0; i < pts.length; i += step) pts[i]];
+  if (picked.last != pts.last) picked.add(pts.last);
+  final o = picked.first, dst = picked.last;
+  final way = picked.length > 2 ? picked.sublist(1, picked.length - 1).map((p) => '${p.lat},${p.lng}').join('|') : '';
+  return 'https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lng}&destination=${dst.lat},${dst.lng}'
+      '${way.isEmpty ? '' : '&waypoints=${Uri.encodeComponent(way)}'}&travelmode=driving';
 }

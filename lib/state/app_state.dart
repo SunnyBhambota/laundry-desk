@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,6 +11,7 @@ import '../l10n/strings.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/shop_store.dart';
+import '../services/tracking_service.dart';
 
 /// Session: who is using the app (owner or a staff member) and which shop.
 class AppState extends ChangeNotifier {
@@ -53,9 +57,12 @@ class AppState extends ChangeNotifier {
         if (staffUser == null || !staffUser!.active) {
           staffUser = null;
           await p.remove(_kStaff);
+        } else {
+          _startTracking();
         }
       }
     }
+    locked = lockOn;
     loaded = true;
     notifyListeners();
   }
@@ -116,9 +123,43 @@ class AppState extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     await p.setStringList(_kStaff, [uid, staffUser!.id]);
     data!.checkIn(staffUser!.id);
+    _startTracking();
     notifyListeners();
     return null;
   }
+
+  void _startTracking() {
+    if (staffUser?.role == Role.delivery && data != null && module('delivery')) {
+      TrackingService.instance.start(data!, staffUser!.id);
+    }
+  }
+
+  // ---------- app lock (owner) ----------
+  bool locked = false;
+
+  bool get lockOn => isOwner && (data?.lockHash.isNotEmpty ?? false);
+
+  void lockNow() {
+    if (lockOn) {
+      locked = true;
+      notifyListeners();
+    }
+  }
+
+  bool unlock(String pin) {
+    if (data == null || data!.lockHash != _pinHash(pin)) return false;
+    locked = false;
+    notifyListeners();
+    return true;
+  }
+
+  void setLockPin(String? pin) {
+    if (data == null) return;
+    data!.lockHash = pin == null || pin.isEmpty ? '' : _pinHash(pin);
+    data!.changed();
+  }
+
+  String _pinHash(String pin) => sha256.convert(utf8.encode('ld-lock:$shopOwnerUid:$pin')).toString();
 
   void setBranchFilter(String? id) {
     branchFilter = id;
@@ -126,6 +167,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    TrackingService.instance.stop();
+    locked = false;
     if (staffUser != null) {
       data?.checkOut(staffUser!.id);
       final p = await SharedPreferences.getInstance();

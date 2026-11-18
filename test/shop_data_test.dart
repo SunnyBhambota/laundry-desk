@@ -6,6 +6,7 @@ import 'package:laundry_desk/data/sample_data.dart';
 import 'package:laundry_desk/data/shop_data.dart';
 import 'package:laundry_desk/logic/messages.dart';
 import 'package:laundry_desk/models/models.dart';
+import 'package:laundry_desk/services/export_service.dart';
 import 'package:laundry_desk/widgets/ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -121,7 +122,18 @@ void main() {
     expect(stats['demo_s3']!.statusUpdates, greaterThan(0));
     final msg = Messages.bill(d.orders.first, shopName: 'Sparkle', customerName: 'Priya', currency: 'INR');
     expect(msg, contains('Total'));
+    final pdf = await ExportService.billPdf(shop: shop, data: d, o: d.orders.first);
+    expect(pdf.length, greaterThan(1000));
+    final tags = await ExportService.tagsPdf(shop: shop, data: d, o: d.orders.first);
+    expect(tags.length, greaterThan(1000));
+    final rep = await ExportService.reportPdf(
+        shop: shop, data: d, r: Report(orders: d.orders, expenses: d.expenses, range: DateRange.of(Period.month)), periodLabel: 'This month');
+    expect(rep.length, greaterThan(1000));
+    final csv = ExportService.ordersCsv(d, d.orders);
+    expect(csv.split('\n').first, startsWith('Order,Date,Customer'));
+    expect(d.lastPing('demo_s4'), isNotNull);
     d.clearSample();
+    expect(d.pings, isEmpty);
     expect(d.orders, isEmpty);
     expect(d.staff, isEmpty);
     expect(d.branches.length, 1);

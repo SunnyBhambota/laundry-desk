@@ -192,6 +192,7 @@ class LaundryOrder {
     this.rack = '',
     this.notes = '',
     this.createdBy = '',
+    this.proof,
     List<Payment>? payments,
     List<StatusEvent>? history,
   })  : payments = payments ?? [],
@@ -215,6 +216,7 @@ class LaundryOrder {
   String rack;
   String notes;
   String createdBy;
+  Ping? proof; // where the order was handed over (delivery proof)
   final List<Payment> payments;
   final List<StatusEvent> history;
 
@@ -262,6 +264,7 @@ class LaundryOrder {
         'rack': rack,
         'notes': notes,
         'createdBy': createdBy,
+        'proof': proof?.toJson(),
         'payments': payments.map((p) => p.toJson()).toList(),
         'history': history.map((h) => h.toJson()).toList(),
       };
@@ -285,6 +288,7 @@ class LaundryOrder {
         rack: j['rack'] as String? ?? '',
         notes: j['notes'] as String? ?? '',
         createdBy: j['createdBy'] as String? ?? '',
+        proof: j['proof'] is Map ? Ping.fromJson(Map<String, dynamic>.from(j['proof'] as Map)) : null,
         payments: ((j['payments'] as List?) ?? []).map((e) => Payment.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         history: ((j['history'] as List?) ?? []).map((e) => StatusEvent.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
       );
@@ -400,3 +404,22 @@ class Activity {
 }
 
 String dayKey(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// One GPS point of a delivery person.
+class Ping {
+  Ping({required this.lat, required this.lng, required this.at, this.orderId = ''});
+  final double lat;
+  final double lng;
+  final DateTime at;
+  final String orderId;
+
+  String get mapUrl => 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+
+  Map<String, dynamic> toJson() => {'lat': lat, 'lng': lng, 'at': at.toIso8601String(), 'orderId': orderId};
+  factory Ping.fromJson(Map<String, dynamic> j) => Ping(
+        lat: (j['lat'] as num?)?.toDouble() ?? 0,
+        lng: (j['lng'] as num?)?.toDouble() ?? 0,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        orderId: j['orderId'] as String? ?? '',
+      );
+}

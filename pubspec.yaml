@@ -16,6 +16,12 @@ dependencies:
   crypto: ^3.0.5
   # WhatsApp bills / reminders, call, maps
   url_launcher: ^6.3.0
+  # print / export: PDF bills, QR tags, reports, CSV
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  share_plus: ^10.1.2
+  # delivery staff GPS tracking
+  geolocator: ^13.0.2
   # login + cloud (works without these in demo mode until Firebase is set up)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1

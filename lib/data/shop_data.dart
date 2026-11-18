@@ -37,6 +37,10 @@ class ShopData extends ChangeNotifier {
   List<Attendance> attendance = [];
   List<Expense> expenses = [];
   List<Activity> activity = [];
+  /// Delivery staff GPS trail: staffId → points (last 200 each).
+  Map<String, List<Ping>> pings = {};
+  /// Owner app-lock PIN (salted hash, empty = off).
+  String lockHash = '';
 
   static String _key(String uid) => 'ld_data_$uid';
   static const _kIndex = 'ld_shop_index';
@@ -170,6 +174,8 @@ class ShopData extends ChangeNotifier {
         'attendance': attendance.map((e) => e.toJson()).toList(),
         'expenses': expenses.map((e) => e.toJson()).toList(),
         'activity': activity.map((e) => e.toJson()).toList(),
+        'pings': pings.map((k, v) => MapEntry(k, v.map((p) => p.toJson()).toList())),
+        'lockHash': lockHash,
       };
 
   void _fromJson(Map<String, dynamic> j) {
@@ -193,6 +199,9 @@ class ShopData extends ChangeNotifier {
     attendance = list('attendance').map(Attendance.fromJson).toList();
     expenses = list('expenses').map(Expense.fromJson).toList();
     activity = list('activity').map(Activity.fromJson).toList();
+    pings = Map<String, dynamic>.from(j['pings'] as Map? ?? {}).map((k, v) => MapEntry(
+        k, (v as List).map((e) => Ping.fromJson(Map<String, dynamic>.from(e as Map))).toList()));
+    lockHash = j['lockHash'] as String? ?? '';
   }
 
   // ---------------- plan & modules ----------------
@@ -387,6 +396,18 @@ class ShopData extends ChangeNotifier {
     return g;
   }
 
+  void addPing(String staffId, Ping p) {
+    final l = pings.putIfAbsent(staffId, () => []);
+    l.add(p);
+    if (l.length > 200) l.removeRange(0, l.length - 200);
+    changed();
+  }
+
+  Ping? lastPing(String staffId) {
+    final l = pings[staffId];
+    return (l == null || l.isEmpty) ? null : l.last;
+  }
+
   /// Removes sample customers/orders/staff/expenses (keeps setup, rate card, branches you added).
   void clearSample() {
     customers.removeWhere((c) => c.id.startsWith('demo_'));
@@ -396,6 +417,7 @@ class ShopData extends ChangeNotifier {
     branches.removeWhere((b) => b.id.startsWith('demo_'));
     attendance.removeWhere((a) => a.staffId.startsWith('demo_'));
     activity.removeWhere((a) => a.by.startsWith('demo_') || a.orderId.startsWith('demo_'));
+    pings.removeWhere((k, _) => k.startsWith('demo_'));
     hasSample = false;
     if (orders.isEmpty) nextNumber = 1;
     changed();

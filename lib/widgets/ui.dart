@@ -187,6 +187,10 @@ Future<void> openMaps(String address) async {
   await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
+Future<void> openUrl(String url) async {
+  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+}
+
 Future<bool> confirm(BuildContext context, String title, String body, {String ok = 'OK', bool danger = false}) async {
   final r = await showDialog<bool>(
     context: context,
