@@ -30,12 +30,12 @@ class SampleData {
 
     // staff
     final staff = [
-      Staff(id: 'demo_s1', name: 'Sunita Kale', phone: '9820011111', role: Role.manager, branchId: main, pin: '1111', salary: 22000),
-      Staff(id: 'demo_s2', name: 'Imran Shaikh', phone: '9820022222', role: Role.counter, branchId: b2.id, pin: '2222', salary: 15000),
-      Staff(id: 'demo_s3', name: 'Ravi Pawar', phone: '9820033333', role: Role.washer, branchId: main, pin: '3333', salary: 14000),
-      Staff(id: 'demo_s4', name: 'Arjun More', phone: '9820044444', role: Role.delivery, branchId: main, pin: '4444', salary: 13000),
-      Staff(id: 'demo_s5', name: 'Deepak Yadav', phone: '9820055555', role: Role.delivery, branchId: b2.id, pin: '5555', salary: 13000),
-      Staff(id: 'demo_s6', name: 'Neha Salvi', phone: '9820066666', role: Role.counter, branchId: b3.id, pin: '6666', salary: 15000),
+      Staff(id: 'demo_s1', name: 'Sunita Kale', phone: '9820011111', role: Role.manager, branchId: main, pinHash: ShopData.staffKey(d.shopCode, '9820011111', '1111'), salary: 22000),
+      Staff(id: 'demo_s2', name: 'Imran Shaikh', phone: '9820022222', role: Role.counter, branchId: b2.id, pinHash: ShopData.staffKey(d.shopCode, '9820022222', '2222'), salary: 15000),
+      Staff(id: 'demo_s3', name: 'Ravi Pawar', phone: '9820033333', role: Role.washer, branchId: main, pinHash: ShopData.staffKey(d.shopCode, '9820033333', '3333'), salary: 14000),
+      Staff(id: 'demo_s4', name: 'Arjun More', phone: '9820044444', role: Role.delivery, branchId: main, pinHash: ShopData.staffKey(d.shopCode, '9820044444', '4444'), salary: 13000),
+      Staff(id: 'demo_s5', name: 'Deepak Yadav', phone: '9820055555', role: Role.delivery, branchId: b2.id, pinHash: ShopData.staffKey(d.shopCode, '9820055555', '5555'), salary: 13000),
+      Staff(id: 'demo_s6', name: 'Neha Salvi', phone: '9820066666', role: Role.counter, branchId: b3.id, pinHash: ShopData.staffKey(d.shopCode, '9820066666', '6666'), salary: 15000),
     ];
     d.staff.addAll(staff);
     final counters = ['owner', 'demo_s1', 'demo_s2', 'demo_s6'];

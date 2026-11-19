@@ -7,21 +7,14 @@ import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
-/// Logo A "Drum Door".
+/// App logo (owner's design: phone + washing machine), assets/images/logo_mark.png.
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 34});
   final double size;
 
-  static const svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-<defs><clipPath id="d"><circle cx="60" cy="66" r="26"/></clipPath></defs>
-<rect width="120" height="120" rx="28" fill="#1F5FD1"/>
-<circle cx="60" cy="66" r="33" fill="#FFFFFF"/>
-<circle cx="60" cy="66" r="26" fill="#E6F1FF"/>
-<path clip-path="url(#d)" d="M28 68 q8 -8 16 0 t16 0 t16 0 t16 0 V100 H28Z" fill="#3CC6D8"/>
-</svg>''';
-
   @override
-  Widget build(BuildContext context) => SvgPicture.string(svg, width: size, height: size);
+  Widget build(BuildContext context) =>
+      Image.asset('assets/images/logo_mark.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'Laundry Desk');
 }
 
 class Wordmark extends StatelessWidget {
@@ -33,10 +26,10 @@ class Wordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(children: [
-        TextSpan(text: 'Laundry', style: heading(size, color: light ? Colors.white : LD.navy)),
+        TextSpan(text: 'Laundry', style: heading(size, color: light ? Colors.white : const Color(0xFF0D3F94))),
         TextSpan(
           text: 'Desk',
-          style: heading(size, weight: FontWeight.w500, color: light ? const Color(0xFF8FB6FF) : LD.primary),
+          style: heading(size, weight: FontWeight.w700, color: light ? const Color(0xFF6FE0F0) : const Color(0xFF14AFCB)),
         ),
       ]),
     );

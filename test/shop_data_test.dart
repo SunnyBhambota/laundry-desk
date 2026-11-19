@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:laundry_desk/data/cloud_sync.dart';
 import 'package:laundry_desk/data/ops_models.dart';
 import 'package:laundry_desk/data/rate_card.dart';
 import 'package:laundry_desk/data/reports.dart';
@@ -122,6 +123,9 @@ void main() {
     expect(stats['demo_s3']!.statusUpdates, greaterThan(0));
     final msg = Messages.bill(d.orders.first, shopName: 'Sparkle', customerName: 'Priya', currency: 'INR');
     expect(msg, contains('Total'));
+    expect(d.verifyStaff('+91 98200 44444', '4444')?.id, 'demo_s4');
+    expect(d.verifyStaff('9820044444', '1234'), isNull);
+    expect(d.staff.every((s) => !s.pinHash.contains('4444')), isTrue);
     final pdf = await ExportService.billPdf(shop: shop, data: d, o: d.orders.first);
     expect(pdf.length, greaterThan(1000));
     final tags = await ExportService.tagsPdf(shop: shop, data: d, o: d.orders.first);
@@ -137,5 +141,9 @@ void main() {
     expect(d.orders, isEmpty);
     expect(d.staff, isEmpty);
     expect(d.branches.length, 1);
+  });
+
+  test('cloud json is canonical (no write loops)', () {
+    expect(CloudSync.enc({'b': 1, 'a': [1.0, {'y': 2, 'x': 'z'}]}), CloudSync.enc({'a': [1, {'x': 'z', 'y': 2.0}], 'b': 1.0}));
   });
 }

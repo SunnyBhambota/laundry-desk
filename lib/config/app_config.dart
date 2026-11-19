@@ -4,16 +4,15 @@ class AppConfig {
 
   static const appName = 'Laundry Desk';
   static const company = 'BrotriX Technologies';
-  static const version = '0.1.0';
+  static const version = '0.2.0';
 
-  /// Firebase (one-time setup, see README "Firebase chalu karna").
-  /// While these are empty the app runs in DEMO MODE: accounts and the
-  /// shop profile are kept only on this phone.
-  static const firebaseApiKey = '';
-  static const firebaseAppId = '';
-  static const firebaseSenderId = '';
-  static const firebaseProjectId = '';
-  static const firebaseStorageBucket = '';
+  /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).
+  /// If these are emptied the app runs in DEMO MODE (data only on this phone).
+  static const firebaseApiKey = 'AIzaSyBxkZ9Uoa-025gof-DtFOFF4jBWJbCX0ms';
+  static const firebaseAppId = '1:356269298314:android:3a9979a0c3eca1578f5373';
+  static const firebaseSenderId = '356269298314';
+  static const firebaseProjectId = 'laundry-desk-4308f';
+  static const firebaseStorageBucket = 'laundry-desk-4308f.firebasestorage.app';
 
   static bool get firebaseReady =>
       firebaseApiKey.isNotEmpty && firebaseAppId.isNotEmpty && firebaseProjectId.isNotEmpty;
@@ -32,7 +31,12 @@ class AppConfig {
   };
 
   /// BrotriX admin screen (More → tap the version 7 times). Change before launch.
-  static const superAdminPin = '2468';
+  static const superAdminPin = '0000';
+
+  /// Free plan limits (after the trial, without a paid plan).
+  static const freeMaxBranches = 1;
+  static const freeMaxStaff = 2;
+  static const freeOrdersPerMonth = 150;
 
   /// Modules. Free ones stay on after the trial; the rest need a plan.
   static const freeModules = ['orders', 'customers', 'bills', 'basicReports'];

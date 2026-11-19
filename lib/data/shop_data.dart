@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
+import 'cloud_sync.dart';
 import 'ops_models.dart';
 import 'rate_card.dart';
 
@@ -41,6 +43,8 @@ class ShopData extends ChangeNotifier {
   Map<String, List<Ping>> pings = {};
   /// Owner app-lock PIN (salted hash, empty = off).
   String lockHash = '';
+  /// Commission / incentive rules (see logic/payroll.dart).
+  Map<String, dynamic> rules = {};
 
   static String _key(String uid) => 'ld_data_$uid';
   static const _kIndex = 'ld_shop_index';
@@ -53,22 +57,88 @@ class ShopData extends ChangeNotifier {
 
   // ---------------- load / save ----------------
 
-  static Future<ShopData> open(String ownerUid) async {
+  bool get cloudOn => AuthService.instance.cloud && !ownerUid.startsWith('local_');
+  CloudSync? sync;
+
+  /// [admin] false for staff phones (they cannot write settings/staff/branches/rates/expenses).
+  static Future<ShopData> open(String ownerUid, {bool admin = true}) async {
     final d = ShopData(ownerUid);
     final p = await SharedPreferences.getInstance();
-    var raw = p.getString(_key(ownerUid));
-    if (raw == null && AuthService.instance.cloud && !ownerUid.startsWith('local_')) {
-      try {
-        final doc = await FirebaseFirestore.instance.collection('shopData').doc(ownerUid).get();
-        if (doc.exists) raw = doc.data()?['json'] as String?;
-      } catch (_) {}
-    }
+    final raw = p.getString(_key(ownerUid));
     if (raw != null) {
       try {
         d._fromJson(Map<String, dynamic>.from(jsonDecode(raw) as Map));
       } catch (_) {}
     }
+    if (d.cloudOn) {
+      final cs = CloudSync(d)..admin = admin;
+      d.sync = cs;
+      try {
+        final has = await cs.pull();
+        if (!has && admin && d.initialised) {
+          // first time online with data made on this phone: upload it
+          await cs.push();
+        }
+        d._saveLocal();
+      } catch (_) {
+        // offline: keep the phone copy, sync later
+      }
+      cs.listen();
+    }
     return d;
+  }
+
+  /// Called by CloudSync when another phone changed something.
+  void remoteChanged() {
+    notifyListeners();
+    _saveLocal();
+  }
+
+  Map<String, dynamic> settingsJson() => {
+        'shopCode': shopCode,
+        'taxPct': taxPct,
+        'expressPct': expressPct,
+        'dueDays': dueDays,
+        'plan': plan,
+        'planUntil': planUntil?.toIso8601String(),
+        'disabledModules': disabledModules.toList()..sort(),
+        'hasSample': hasSample,
+        'rates': rates,
+        'lockHash': lockHash,
+        'rules': rules,
+      };
+
+  void applySettings(Map<String, dynamic> j) {
+    shopCode = j['shopCode'] as String? ?? shopCode;
+    taxPct = (j['taxPct'] as num?)?.toDouble() ?? taxPct;
+    expressPct = (j['expressPct'] as num?)?.toDouble() ?? expressPct;
+    dueDays = (j['dueDays'] as num?)?.toInt() ?? dueDays;
+    plan = j['plan'] as String? ?? plan;
+    planUntil = DateTime.tryParse(j['planUntil'] as String? ?? '');
+    disabledModules = ((j['disabledModules'] as List?) ?? []).map((e) => '$e').toSet();
+    hasSample = j['hasSample'] as bool? ?? hasSample;
+    rates = Map<String, dynamic>.from(j['rates'] as Map? ?? {}).map((k, v) => MapEntry(k, (v as num).toDouble()));
+    lockHash = j['lockHash'] as String? ?? '';
+    if (j['rules'] is Map) rules = Map<String, dynamic>.from(j['rules'] as Map);
+  }
+
+  /// Staff PIN hash (same formula in Firestore rules check via staffKeys).
+  static String staffKey(String code, String phone, String pin) =>
+      sha256.convert(utf8.encode('${code.toUpperCase()}:${phone10(phone)}:$pin')).toString();
+
+  Staff? verifyStaff(String phone, String pin) {
+    final p10 = phone10(phone);
+    final key = staffKey(shopCode, p10, pin);
+    for (final s in staff) {
+      if (!s.active || phone10(s.phone) != p10) continue;
+      if (s.pinHash == key || s.pinHash == 'plain:$pin') return s;
+    }
+    return null;
+  }
+
+  void setStaffPin(Staff s, String pin) {
+    s.pinHash = staffKey(shopCode, s.phone, pin);
+    changed();
   }
 
   bool get initialised => branches.isNotEmpty;
@@ -135,22 +205,19 @@ class ShopData extends ChangeNotifier {
   }
 
   Future<void> _write() async {
-    final raw = jsonEncode(toJson());
+    await _saveLocal();
+    await sync?.push();
+  }
+
+  Future<void> _saveLocal() async {
     final p = await SharedPreferences.getInstance();
-    await p.setString(_key(ownerUid), raw);
-    if (AuthService.instance.cloud && !ownerUid.startsWith('local_')) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('shopData')
-            .doc(ownerUid)
-            .set({'json': raw, 'updatedAt': FieldValue.serverTimestamp()});
-      } catch (_) {}
-    }
+    await p.setString(_key(ownerUid), jsonEncode(toJson()));
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
+    sync?.stop();
     super.dispose();
   }
 
@@ -176,6 +243,7 @@ class ShopData extends ChangeNotifier {
         'activity': activity.map((e) => e.toJson()).toList(),
         'pings': pings.map((k, v) => MapEntry(k, v.map((p) => p.toJson()).toList())),
         'lockHash': lockHash,
+        'rules': rules,
       };
 
   void _fromJson(Map<String, dynamic> j) {
@@ -202,6 +270,7 @@ class ShopData extends ChangeNotifier {
     pings = Map<String, dynamic>.from(j['pings'] as Map? ?? {}).map((k, v) => MapEntry(
         k, (v as List).map((e) => Ping.fromJson(Map<String, dynamic>.from(e as Map))).toList()));
     lockHash = j['lockHash'] as String? ?? '';
+    if (j['rules'] is Map) rules = Map<String, dynamic>.from(j['rules'] as Map);
   }
 
   // ---------------- plan & modules ----------------
@@ -360,7 +429,8 @@ class ShopData extends ChangeNotifier {
   }
 
   Staff addStaff({required String name, required String phone, required Role role, required String branchId, required String pin, double salary = 0}) {
-    final s = Staff(id: newId('s'), name: name.trim(), phone: phone.replaceAll(RegExp(r'[^0-9]'), ''), role: role, branchId: branchId, pin: pin, salary: salary);
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final s = Staff(id: newId('s'), name: name.trim(), phone: digits, role: role, branchId: branchId, pinHash: staffKey(shopCode, digits, pin), salary: salary);
     staff.add(s);
     changed();
     return s;

@@ -131,7 +131,9 @@ class BranchesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(t('branches'))),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: multi || d.branches.isEmpty ? () => _add(context, app) : () => toast(context, t('moduleOff')),
+        onPressed: app.limit('branch') != null
+            ? () => toast(context, t(app.limit('branch')!))
+            : (multi || d.branches.isEmpty ? () => _add(context, app) : () => toast(context, t('moduleOff'))),
         icon: const Icon(Icons.add_business_outlined),
         label: Text(t('addBranch').replaceAll('+ ', '')),
       ),

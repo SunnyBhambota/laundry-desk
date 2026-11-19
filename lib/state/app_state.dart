@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../data/ops_models.dart';
 import '../data/sample_data.dart';
 import '../data/shop_data.dart';
@@ -41,6 +43,25 @@ class AppState extends ChangeNotifier {
 
   String t(String key) => S.of(lang, key);
 
+  bool get premium => shop != null && data != null && data!.premiumActive(shop!);
+
+  /// Free-plan limit hit? Returns a message key or null. kind: order | staff | branch
+  String? limit(String kind) {
+    if (premium || data == null) return null;
+    final d = data!;
+    switch (kind) {
+      case 'order':
+        final now = DateTime.now();
+        final n = d.orders.where((o) => o.createdAt.year == now.year && o.createdAt.month == now.month).length;
+        return n >= AppConfig.freeOrdersPerMonth ? 'limit.order' : null;
+      case 'staff':
+        return d.staff.where((s) => s.active).length >= AppConfig.freeMaxStaff ? 'limit.staff' : null;
+      case 'branch':
+        return d.branches.length >= AppConfig.freeMaxBranches ? 'limit.branch' : null;
+    }
+    return null;
+  }
+
   bool module(String m) => shop != null && data != null && data!.moduleOn(m, shop!);
 
   Future<void> load() async {
@@ -52,7 +73,8 @@ class AppState extends ChangeNotifier {
     } else {
       final raw = p.getStringList(_kStaff);
       if (raw != null && raw.length == 2) {
-        await _openShop(raw[0]);
+        if (AuthService.instance.cloud) await AuthService.instance.ensureStaffSession();
+        await _openShop(raw[0], admin: false);
         staffUser = data?.staffBy(raw[1]);
         if (staffUser == null || !staffUser!.active) {
           staffUser = null;
@@ -67,11 +89,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _openShop(String uid) async {
+  Future<void> _openShop(String uid, {bool admin = true}) async {
     shopOwnerUid = uid;
     shop = await ShopStore.instance.load(uid);
     data?.removeListener(notifyListeners);
-    data = await ShopData.open(uid);
+    data?.dispose();
+    data = await ShopData.open(uid, admin: admin);
     data!.addListener(notifyListeners);
   }
 
@@ -111,17 +134,46 @@ class AppState extends ChangeNotifier {
   }
 
   /// Staff login with shop code + mobile + PIN. Returns error key or null.
+  /// Cloud: anonymous sign-in, then a members/{uid} record that Firestore rules accept
+  /// only with the right PIN hash. Demo: checked against this phone's data.
   Future<String?> staffLogin({required String code, required String mobile, required String pin}) async {
-    final uid = await ShopData.ownerForCode(code);
-    if (uid == null) return 'err.shopCode';
-    await _openShop(uid);
-    final digits = mobile.replaceAll(RegExp(r'[^0-9]'), '');
-    final s = data!.staff.where((x) => x.active && x.phone.endsWith(digits.length > 10 ? digits.substring(digits.length - 10) : digits) && x.pin == pin);
-    if (digits.length < 7 || s.isEmpty) return 'err.staffLogin';
-    staffUser = s.first;
+    final c = code.trim().toUpperCase();
+    final p10 = phone10(mobile);
+    if (c.length < 4 || p10.length < 7 || pin.length != 4) return 'err.staffLogin';
+    try {
+      if (AuthService.instance.cloud) {
+        final uid = await AuthService.instance.ensureStaffSession();
+        final ownerUid = await ShopData.ownerForCode(c);
+        if (ownerUid == null || uid == null) return 'err.shopCode';
+        try {
+          await FirebaseFirestore.instance.collection('members').doc(uid).set({
+            'ownerUid': ownerUid,
+            'code': c,
+            'phone': p10,
+            'key': ShopData.staffKey(c, p10, pin),
+            'at': DateTime.now().toIso8601String(),
+          });
+        } catch (_) {
+          return 'err.staffLogin';
+        }
+        await _openShop(ownerUid, admin: false);
+        final s = data!.staff.where((x) => x.active && phone10(x.phone) == p10);
+        if (s.isEmpty) return 'err.staffLogin';
+        staffUser = s.first;
+      } else {
+        final ownerUid = await ShopData.ownerForCode(c);
+        if (ownerUid == null) return 'err.shopCode';
+        await _openShop(ownerUid, admin: false);
+        final s = data!.verifyStaff(p10, pin);
+        if (s == null) return 'err.staffLogin';
+        staffUser = s;
+      }
+    } catch (_) {
+      return 'err.network';
+    }
     owner = null;
     final p = await SharedPreferences.getInstance();
-    await p.setStringList(_kStaff, [uid, staffUser!.id]);
+    await p.setStringList(_kStaff, [shopOwnerUid, staffUser!.id]);
     data!.checkIn(staffUser!.id);
     _startTracking();
     notifyListeners();
@@ -171,15 +223,16 @@ class AppState extends ChangeNotifier {
     locked = false;
     if (staffUser != null) {
       data?.checkOut(staffUser!.id);
+      await Future<void>.delayed(const Duration(milliseconds: 600)); // let the check-out sync
       final p = await SharedPreferences.getInstance();
       await p.remove(_kStaff);
-    } else {
-      await AuthService.instance.signOut();
     }
+    await AuthService.instance.signOut();
     owner = null;
     staffUser = null;
     shop = null;
     data?.removeListener(notifyListeners);
+    data?.dispose();
     data = null;
     branchFilter = null;
     notifyListeners();

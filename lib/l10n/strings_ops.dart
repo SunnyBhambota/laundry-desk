@@ -176,7 +176,7 @@ const opsEn = <String, String>{
   'billingSoon': 'Payments go live with the Play Store release. In testing, "Activate (test)" turns the plan on.',
   'proFeat': 'One branch · WhatsApp alerts · staff tracking · barcode tags · advanced reports',
   'bizFeat': 'Everything in Pro · multi-branch · delivery app & tracking · priority support',
-  'freeFeat': 'Orders · customers · bills · basic reports',
+  'freeFeat': '150 orders/month · customers · bill PDF & WhatsApp · basic reports · 1 branch · 2 staff',
   'moduleOff': 'This module is switched off for your shop.',
   'superAdmin': 'BrotriX admin',
   'superPin': 'Admin PIN',
@@ -220,6 +220,10 @@ const opsEn = <String, String>{
   'pinMismatch': 'PINs do not match (4 digits).',
   'lockSet': 'App lock is on.',
   'lockRemove': 'Turn off app lock',
+  'limit.order': 'Free plan: 150 orders a month. Choose a plan in More → Plans to add more.',
+  'limit.staff': 'Free plan: up to 2 staff. Choose a plan in More → Plans.',
+  'limit.branch': 'Free plan: 1 branch. Choose the Business plan for more branches.',
+  'err.network': 'No internet. Please try again.',
 };
 
 const opsHi = <String, String>{
@@ -387,7 +391,7 @@ const opsHi = <String, String>{
   'billingSoon': 'पेमेंट Play Store रिलीज़ के साथ चालू होगा। टेस्टिंग में "चालू करें (टेस्ट)" से प्लान चालू होता है।',
   'proFeat': 'एक ब्रांच · WhatsApp अलर्ट · स्टाफ़ ट्रैकिंग · बारकोड टैग · एडवांस रिपोर्ट',
   'bizFeat': 'प्रो का सब कुछ · मल्टी-ब्रांच · डिलीवरी ऐप और ट्रैकिंग · प्राथमिकता सपोर्ट',
-  'freeFeat': 'ऑर्डर · ग्राहक · बिल · बेसिक रिपोर्ट',
+  'freeFeat': 'महीने में 150 ऑर्डर · ग्राहक · बिल PDF और WhatsApp · बेसिक रिपोर्ट · 1 ब्रांच · 2 स्टाफ़',
   'moduleOff': 'यह मॉड्यूल आपकी दुकान के लिए बंद है।',
   'superAdmin': 'BrotriX एडमिन',
   'superPin': 'एडमिन PIN',
@@ -430,4 +434,7 @@ const opsHi = <String, String>{
   'pinMismatch': 'PIN मेल नहीं खाते (4 अंक)।',
   'lockSet': 'ऐप लॉक चालू है।',
   'lockRemove': 'ऐप लॉक बंद करें',
+  'limit.order': 'फ़्री प्लान: महीने में 150 ऑर्डर। और → प्लान से प्लान चुनें।',
+  'limit.staff': 'फ़्री प्लान: 2 स्टाफ़ तक। और → प्लान से प्लान चुनें।',
+  'limit.branch': 'फ़्री प्लान: 1 ब्रांच। ज़्यादा ब्रांच के लिए बिज़नेस प्लान।',
 };

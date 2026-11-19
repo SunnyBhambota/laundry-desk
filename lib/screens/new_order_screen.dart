@@ -346,6 +346,11 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       toast(context, t('needItems'));
       return;
     }
+    final lim = app.limit('order');
+    if (lim != null) {
+      toast(context, t(lim));
+      return;
+    }
     final d = app.data!;
     final o = d.createOrder(
       customerId: _customer!.id,

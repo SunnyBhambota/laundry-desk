@@ -1,20 +1,68 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Owner profile and shop: only the owner.
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(owner) { return signedIn() && request.auth.uid == owner; }
+    function memberDoc() { return get(/databases/$(database)/documents/members/$(request.auth.uid)).data; }
+    // Staff phone: a "members" record whose PIN hash still matches the owner's staffKeys list
+    // (removing a staff member or changing the PIN cuts access at once).
+    function isMember(owner) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && memberDoc().ownerUid == owner
+        && get(/databases/$(database)/documents/staffKeys/$(memberDoc().code)).data.keys[memberDoc().phone] == memberDoc().key;
+    }
+
+    // Owner profile
     match /owners/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isOwner(uid);
     }
-    match /shops/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    // Shop profile + all shop records
+    match /shops/{owner} {
+      allow read: if isOwner(owner) || isMember(owner);
+      allow write: if isOwner(owner);
+
+      // Settings: owner only. Order counter: owner or staff.
+      match /meta/{doc} {
+        allow read: if isOwner(owner) || isMember(owner);
+        allow write: if isOwner(owner) || (doc == 'counter' && isMember(owner));
+      }
+      // Day-to-day work: owner and staff
+      match /{col}/{id} {
+        allow read: if isOwner(owner) || isMember(owner);
+        allow write: if isOwner(owner)
+          || (isMember(owner) && col in ['customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'payouts']);
+      }
     }
-    match /shopData/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Shop code → owner id (staff login lookup). Readable by signed-in users only.
+
+    // Shop code → owner (staff login looks this up)
     match /shopCodes/{code} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Staff PIN hashes: never readable; only the owner writes them. Rules read them with get().
+    match /staffKeys/{code} {
+      allow read: if false;
+      allow write: if signedIn() && request.resource.data.ownerUid == request.auth.uid
+        && (!exists(/databases/$(database)/documents/staffKeys/$(code))
+            || get(/databases/$(database)/documents/staffKeys/$(code)).data.ownerUid == request.auth.uid);
+    }
+
+    // Staff phone sign-in: allowed only with the right PIN hash.
+    match /members/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || resource.data.ownerUid == request.auth.uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.key == get(/databases/$(database)/documents/staffKeys/$(request.resource.data.code)).data.keys[request.resource.data.phone]
+        && request.resource.data.ownerUid == get(/databases/$(database)/documents/staffKeys/$(request.resource.data.code)).data.ownerUid;
+      allow delete: if signedIn() && (request.auth.uid == uid || resource.data.ownerUid == request.auth.uid);
+    }
+
+    // Old v0.1 single-document backup (kept readable for migration)
+    match /shopData/{uid} {
+      allow read, write: if isOwner(uid);
     }
   }
 }

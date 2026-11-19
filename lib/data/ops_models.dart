@@ -301,7 +301,7 @@ class Staff {
     required this.phone,
     required this.role,
     required this.branchId,
-    required this.pin,
+    required this.pinHash,
     this.salary = 0,
     this.active = true,
   });
@@ -310,7 +310,7 @@ class Staff {
   String phone;
   Role role;
   String branchId;
-  String pin; // 4 digits (hashed in cloud version)
+  String pinHash; // sha256("<shopCode>:<last 10 digits of phone>:<pin>"), see staffKey()
   double salary;
   bool active;
 
@@ -326,7 +326,7 @@ class Staff {
         'phone': phone,
         'role': role.name,
         'branchId': branchId,
-        'pin': pin,
+        'pinHash': pinHash,
         'salary': salary,
         'active': active,
       };
@@ -336,7 +336,7 @@ class Staff {
         phone: j['phone'] as String? ?? '',
         role: roleFrom(j['role'] as String? ?? 'counter'),
         branchId: j['branchId'] as String? ?? '',
-        pin: j['pin'] as String? ?? '0000',
+        pinHash: j['pinHash'] as String? ?? (j['pin'] is String ? 'plain:${j['pin']}' : ''),
         salary: (j['salary'] as num?)?.toDouble() ?? 0,
         active: j['active'] as bool? ?? true,
       );
@@ -393,6 +393,7 @@ class Activity {
   final DateTime at;
   final String orderId;
   final String text;
+  String get id => '${at.microsecondsSinceEpoch}_${by}_$kind';
   Map<String, dynamic> toJson() => {'by': by, 'kind': kind, 'at': at.toIso8601String(), 'orderId': orderId, 'text': text};
   factory Activity.fromJson(Map<String, dynamic> j) => Activity(
         by: j['by'] as String? ?? '',
@@ -422,4 +423,10 @@ class Ping {
         at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
         orderId: j['orderId'] as String? ?? '',
       );
+}
+
+/// Last 10 digits of a phone number (staff login key).
+String phone10(String s) {
+  final d = s.replaceAll(RegExp(r'[^0-9]'), '');
+  return d.length > 10 ? d.substring(d.length - 10) : d;
 }

@@ -39,7 +39,7 @@ class _StaffScreenState extends State<StaffScreen> {
         ),
         floatingActionButton: app.canManage
             ? FloatingActionButton.extended(
-                onPressed: () => _addStaff(context, app),
+                onPressed: () => app.limit('staff') != null ? toast(context, t(app.limit('staff')!)) : _addStaff(context, app),
                 icon: const Icon(Icons.person_add_alt_1_outlined),
                 label: Text(t('addStaff')),
               )

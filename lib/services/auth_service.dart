@@ -61,7 +61,7 @@ class AuthService {
   Future<Owner?> currentOwner() async {
     if (_cloud) {
       final u = FirebaseAuth.instance.currentUser;
-      if (u == null) return null;
+      if (u == null || u.isAnonymous) return null; // anonymous = a staff phone
       try {
         final doc = await FirebaseFirestore.instance.collection('owners').doc(u.uid).get();
         if (doc.exists) return Owner.fromJson({...doc.data()!, 'uid': u.uid});
@@ -74,6 +74,17 @@ class AuthService {
     final acc = _accounts(p).where((a) => a['uid'] == uid);
     if (acc.isEmpty) return null;
     return Owner.fromJson(acc.first);
+  }
+
+  /// Staff phones sign in anonymously; access to a shop then comes from members/{uid}.
+  Future<String?> ensureStaffSession() async {
+    if (!_cloud) return null;
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser == null || !auth.currentUser!.isAnonymous) {
+      if (auth.currentUser != null) await auth.signOut();
+      await auth.signInAnonymously();
+    }
+    return auth.currentUser?.uid;
   }
 
   Future<void> signOut() async {

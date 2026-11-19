@@ -28,6 +28,9 @@ jobs:
           F=android/app/build.gradle.kts
           [ -f "$F" ] || F=android/app/build.gradle
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/; s/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' "$F"
+          # Play Store / Firebase app id (fixed forever once published): com.brotrix.laundry
+          sed -i 's/applicationId = "com.brotrix.laundry_desk"/applicationId = "com.brotrix.laundry"/; s/applicationId "com.brotrix.laundry_desk"/applicationId "com.brotrix.laundry"/' "$F"
+          grep -n "applicationId" "$F"
           sed -i '0,/^android {/s//android {\n    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }/' "$F"
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's/android:label="laundry_desk"/android:label="Laundry Desk"/' "$M"
@@ -89,12 +92,12 @@ jobs:
           script: |
             adb install -r app-release.apk
             adb logcat -c
-            adb shell am start -n com.brotrix.laundry_desk/.MainActivity
+            adb shell am start -n com.brotrix.laundry/com.brotrix.laundry_desk.MainActivity
             sleep 35
             adb logcat -d > logcat.txt || true
             grep -n -A25 "FATAL EXCEPTION" logcat.txt | head -80 || true
             adb exec-out screencap -p > screen.png || true
-            adb shell pidof com.brotrix.laundry_desk > /dev/null && echo "App is running" || (echo "::error::App closed right after opening" && exit 1)
+            adb shell pidof com.brotrix.laundry > /dev/null && echo "App is running" || (echo "::error::App closed right after opening" && exit 1)
 
       - uses: actions/upload-artifact@v4
         if: always()
