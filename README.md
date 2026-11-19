@@ -1,4 +1,4 @@
-# Laundry Desk – Android app (v0.1, testing build)
+# Laundry Desk – Android app (v0.2, testing build)
 
 Laundry shop management by **BrotriX Technologies**. Flutter (Android first, iOS later from the same code).
 
@@ -13,6 +13,13 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
   App khulte hi band ho jaye to release nahi banta.
 - Pehli baar Android "unknown apps" ki permission maangega: Chrome ko allow karo.
 
+## v0.2 (19 Nov 2026)
+- **Cloud (Firebase `laundry-desk-4308f`)**: owner login Firebase Auth se, har record alag document (`shops/{owner}/orders/…`), kai phones ek saath, live sync.
+- **Staff alag phone se login**: shop code + mobile + PIN → anonymous sign-in + `members/{uid}`; Firestore rules PIN-hash (`staffKeys`) se check. Staff hatate hi access band.
+- **Complaint / Re-wash, Galat delivery, Issue reports** (wajah, staff, branch, re-open, time, compensation, CSV).
+- **Commission & payroll**: niyam (role-wise), mahine ka hisaab, advance/bonus/kaat, salary slip PDF, leaderboard, staff ki "Meri kamai".
+- Naya logo, app id **`com.brotrix.laundry`** (purana test app hata kar naya install karein), admin PIN `0000`, free plan limits (150 orders/mahina, 1 branch, 2 staff).
+
 ## App kaise chalaye (pehli baar)
 1. **Sign up** (neeche "Sign up"): naam, mobile, password (8+), Terms ✓. Button tab tak **bhaagta** hai jab tak sab sahi na ho.
 2. **Business setup**: shop ka naam, services, branches, team, country/currency, GST, pickup/delivery.
@@ -21,7 +28,7 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
 3. **Staff login** (Login screen → "Staff login"): shop code (More → Shop settings), staff ka mobile, PIN.
    Sample staff PINs: Sunita (manager) 1111, Imran (counter) 2222, Ravi (washing) 3333, Arjun (delivery) 4444,
    Deepak (delivery) 5555, Neha (counter) 6666 — mobile 98200 11111 … 98200 66666.
-4. **BrotriX admin** (sirf owner): More → Version par 7 baar tap → PIN `2468` (`AppConfig.superAdminPin`, launch se pehle badlo).
+4. **BrotriX admin** (sirf owner): More → Version par 7 baar tap → PIN `0000` (`AppConfig.superAdminPin`, launch se pehle badlo).
    Yahan se is shop ke modules on/off aur plan set hote hain.
 
 ## Roles
@@ -56,8 +63,8 @@ Pro ₹499 / ₹2,499 / ₹4,499 · Business ₹999 / ₹4,999 / ₹8,999 (Month
 Testing mein `AppConfig.enforcePremium = false` (sab khula). Launch se pehle `true`.
 
 ## Data
-- **Demo mode (abhi):** account aur shop data sirf phone par (SharedPreferences, password salted SHA-256).
-- **Cloud mode:** Firebase set karte hi login Firebase Auth se aur data Firestore mein (`owners`, `shops`, `shopData`, `shopCodes`).
+- **Cloud mode (v0.2 se chalu):** Firebase Auth + Firestore (`owners`, `shops/{owner}/…`, `shopCodes`, `staffKeys`, `members`). Phone par offline copy bhi rehti hai.
+- `firestore.rules` Firebase console mein publish hain (19 Nov).
 
 ### Firebase chalu karna (ek baar, owner)
 1. console.firebase.google.com → **Add project** → naam `laundry-desk`.

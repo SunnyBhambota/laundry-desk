@@ -34,6 +34,19 @@
 - Tracking: `services/tracking_service.dart` (geolocator) — delivery staff GPS every 2 min on duty + proof at handover; `ShopData.pings`; board trail sheet + Maps route.
 - Data: `lib/data/shop_data.dart` (JSON in SharedPreferences per owner; Firestore `shopData/{uid}` in cloud mode).
 
+## v0.2 (19 Nov 2026)
+- Firebase project `laundry-desk-4308f`, Android app `com.brotrix.laundry` (SHA-1 = ci/debug.keystore). Owner ne Auth (Email/Password + Anonymous), Firestore (Mumbai) aur rules publish kar diye.
+- `data/cloud_sync.dart`: per-record docs + snapshot listeners + canonical JSON diff (no write loops). Staff phones `admin=false`.
+- Staff login cloud: anonymous → `members/{uid}` {ownerUid, code, phone10, key=sha256(CODE:phone10:pin)}; rules compare with `staffKeys/{code}.keys`.
+- Issues: `data/issue_models.dart`, `screens/issue_screens.dart` (complaint stages, wrong-delivery tasks, re-open, reports, CSV).
+- Payroll: `logic/payroll.dart` (rules in `ShopData.rules`), `screens/payroll_screens.dart` (leaderboard, payslip, payouts, rules, my earnings, PDF slip, CSV).
+- Logo: owner ka design (assets/images/logo_mark.png), admin PIN 0000, free limits in AppConfig.
+
+## Owner ko bataya hua pending (order mein)
+v0.3: order edit/refund/customer delete, QR scan, Bluetooth printer, UPI QR on bill, VIP/business rates, backup/restore file, Hindi gaps.
+v0.4: loyalty/coupons/packages, background tracking, pickup slots + route + map, inventory/suppliers, Google login (OTP/reset need Blaze).
+Owner decisions: WhatsApp API, Super Admin web panel (Hostinger), Play Store, customer app, iOS.
+
 ## NEXT (v0.2 ideas)
 - Firebase project banana (owner) → cloud login, staff doosre phone se login (abhi staff login usi phone par jahan shop data hai).
 - Phone OTP login, password reset.
