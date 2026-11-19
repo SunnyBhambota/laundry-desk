@@ -101,6 +101,26 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _google() async {
+    if (_phase != RunPhase.idle) return;
+    final app = context.read<AppState>();
+    setState(() => _phase = RunPhase.loading);
+    try {
+      final owner = await AuthService.instance.signInWithGoogle();
+      if (!mounted) return;
+      if (owner == null) {
+        setState(() => _phase = RunPhase.idle);
+        return;
+      }
+      setState(() => _phase = RunPhase.done);
+      await app.signedInAs(owner);
+    } on AuthError catch (e) {
+      if (!mounted) return;
+      setState(() => _phase = RunPhase.idle);
+      toast(context, app.t('err.${e.code}'));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -179,7 +199,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: LD.primary, width: 2)),
                           child: const Text('G', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: LD.primary)),
                         ),
-                        onTap: () => toast(context, t('soon')),
+                        onTap: _google,
                       ),
                     ),
                     const SizedBox(width: 10),

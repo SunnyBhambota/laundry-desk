@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
+import 'v04_screens.dart';
 
 /// Owner/counter view: pickups and deliveries with the assigned person.
 class DeliveryBoardScreen extends StatelessWidget {
@@ -31,6 +32,13 @@ class DeliveryBoardScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(t('delivery')),
+          actions: [
+            IconButton(
+              tooltip: L(app, 'Live map', 'लाइव मैप'),
+              icon: const Icon(Icons.map_outlined),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RouteMapScreen())),
+            ),
+          ],
           bottom: TabBar(tabs: [Tab(text: '${t('pickups')} · ${pickups.length}'), Tab(text: '${t('toDeliver')} · ${deliver.length}')]),
         ),
         body: Column(children: [
@@ -224,7 +232,13 @@ class MyTasksScreen extends StatelessWidget {
     final toCollect = drops.fold<double>(0, (s, o) => s + o.due);
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('myTasks'))),
+      appBar: AppBar(title: Text(t('myTasks')), actions: [
+        IconButton(
+          tooltip: L(app, 'My route', 'मेरा रूट'),
+          icon: const Icon(Icons.route_outlined),
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RouteMapScreen(agentId: app.actorId))),
+        ),
+      ]),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         _DutyCard(),
         const SizedBox(height: 10),

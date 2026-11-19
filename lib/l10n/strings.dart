@@ -52,6 +52,9 @@ class S {
     'err.exists': 'An account with this mobile number already exists. Please log in.',
     'err.network': 'No internet. Please try again.',
     'err.generic': 'Something went wrong. Please try again.',
+    'err.mobile': 'Please enter your 10-digit mobile number.',
+    'err.cloudOnly': 'Google login works after the cloud is set up.',
+    'err.googleOff': 'Google login is not switched on yet. Use mobile + password for now.',
     'forgotNote': 'Password reset will come with cloud login (next version). For now, register again on this phone.',
     // setup
     'setupTitle': 'Your laundry business',
@@ -128,6 +131,8 @@ class S {
     'm.barcode': 'Barcode tags',
     'm.multiBranch': 'Multi-branch',
     'm.advancedReports': 'Advanced reports',
+    'm.loyalty': 'Offers, points & packages',
+    'm.stock': 'Stock & suppliers',
   };
 
   static const hi = <String, String>{
@@ -177,6 +182,9 @@ class S {
     'err.exists': 'इस मोबाइल नंबर से खाता पहले से है। कृपया लॉग इन करें।',
     'err.network': 'इंटरनेट नहीं है। फिर से कोशिश करें।',
     'err.generic': 'कुछ गड़बड़ हुई। फिर से कोशिश करें।',
+    'err.mobile': 'कृपया 10 अंकों का मोबाइल नंबर लिखें।',
+    'err.cloudOnly': 'Google लॉगिन क्लाउड सेटअप के बाद चलेगा।',
+    'err.googleOff': 'Google लॉगिन अभी चालू नहीं है। अभी मोबाइल + पासवर्ड से लॉगिन करें।',
     'forgotNote': 'पासवर्ड रीसेट क्लाउड लॉगिन के साथ आएगा (अगला वर्ज़न)। अभी इस फ़ोन पर फिर से रजिस्टर करें।',
     'setupTitle': 'आपका लॉन्ड्री बिज़नेस',
     'setupSub': 'इससे हम आपका रेट कार्ड और स्क्रीन तैयार करेंगे।',
@@ -250,6 +258,8 @@ class S {
     'm.barcode': 'बारकोड टैग',
     'm.multiBranch': 'मल्टी-ब्रांच',
     'm.advancedReports': 'एडवांस रिपोर्ट',
+    'm.loyalty': 'ऑफ़र, पॉइंट और पैकेज',
+    'm.stock': 'स्टॉक और सप्लायर',
   };
 
   static String of(String lang, String key) {

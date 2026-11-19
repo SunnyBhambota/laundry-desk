@@ -167,6 +167,9 @@ class OrderDetailScreen extends StatelessWidget {
             row(t('subtotal'), money(o.subtotal, cur)),
             if (o.express) row('${t('express')} +${o.expressPct.toStringAsFixed(0)}%', money(o.expressCharge, cur)),
             if (o.discount > 0) row(t('discount'), '-${money(o.discount, cur)}'),
+            if (o.couponAmount > 0) row('${L(app, 'Coupon', 'कूपन')} ${o.couponCode}', '-${money(o.couponAmount, cur)}'),
+            if (o.pointsUsed > 0) row(L(app, 'Loyalty points', 'लॉयल्टी पॉइंट'), '-${money(o.pointsUsed, cur)}'),
+            if (o.packageValue > 0) row('${L(app, 'Package', 'पैकेज')} · ${o.packageNote}', '-${money(o.packageValue, cur)}'),
             if (o.tax > 0) row('${t('tax')} ${o.taxPct.toStringAsFixed(0)}%', money(o.tax, cur)),
             row(t('total'), money(o.total, cur), bold: true),
             row(t('paid'), money(o.paid, cur), color: const Color(0xFF146C43)),
@@ -178,6 +181,7 @@ class OrderDetailScreen extends StatelessWidget {
         SectionCard(
           child: Column(children: [
             _kv(Icons.schedule_rounded, t('dueBy'), whenText(o.dueAt)),
+            if (o.slot.isNotEmpty) _kv(Icons.access_time, L(app, 'Pickup slot', 'पिकअप का समय'), o.slot),
             _kv(o.homeDelivery ? Icons.delivery_dining_outlined : Icons.storefront_outlined, t('delivery'),
                 o.homeDelivery ? t('homeDelivery') : t('atStore')),
             if (d.branches.length > 1) _kv(Icons.store_mall_directory_outlined, t('branch'), d.branch(o.branchId)?.name ?? ''),

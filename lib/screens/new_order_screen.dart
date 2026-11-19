@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
+import '../data/shop_data.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -30,6 +31,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   final _discount = TextEditingController();
   final _advance = TextEditingController();
   final _notes = TextEditingController();
+  final _coupon = TextEditingController();
+  bool _usePoints = false;
+  bool _usePackage = true;
+  String _slot = '';
   String _cat = 'All';
 
   @override
@@ -58,6 +63,9 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       _discount.clear();
       _advance.clear();
       _notes.clear();
+      _coupon.clear();
+      _usePoints = false;
+      _slot = '';
     });
   }
 
@@ -78,7 +86,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     final subtotal = _lines.fold<double>(0, (s, l) => s + l.amount);
     final expressAmt = _express ? subtotal * d.expressPct / 100 : 0.0;
     final disc = double.tryParse(_discount.text.trim()) ?? 0;
-    final taxable = (subtotal + expressAmt - disc).clamp(0, double.infinity).toDouble();
+    final couponAmt = _coupon.text.trim().isEmpty ? 0.0 : d.couponDiscount(_coupon.text, _customer, subtotal);
+    final pkg = _packageUse(d);
+    final pkgValue = _usePackage && pkg != null ? pkg.$3 : 0.0;
+    final room = (subtotal + expressAmt - disc - couponAmt - pkgValue).clamp(0, double.infinity).toDouble();
+    final pointsMoney = d.pointsMoney(_customer);
+    final pointsAmt = _usePoints ? (pointsMoney < room ? pointsMoney : room) : 0.0;
+    final taxable = (room - pointsAmt).clamp(0, double.infinity).toDouble();
     final tax = taxable * d.taxPct / 100;
     final total = (taxable + tax).roundToDouble();
     final due = _due ?? DateTime.now().add(Duration(days: _express ? 1 : d.dueDays));
@@ -202,6 +216,36 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         ],
         const SizedBox(height: 12),
         SectionCard(
+          title: L(app, 'Offers', 'ऑफ़र'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextField(
+              controller: _coupon,
+              textCapitalization: TextCapitalization.characters,
+              decoration: fieldDeco(L(app, 'Coupon code', 'कूपन कोड'), icon: Icons.confirmation_number_outlined).copyWith(
+                suffixText: _coupon.text.trim().isEmpty ? null : (couponAmt > 0 ? '−${money(couponAmt, cur)}' : L(app, 'not valid', 'मान्य नहीं')),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            if (pointsMoney > 0)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('${L(app, 'Use loyalty points', 'लॉयल्टी पॉइंट इस्तेमाल करें')} (${_customer!.points.toStringAsFixed(0)})'),
+                subtitle: Text('−${money(_usePoints ? pointsAmt : pointsMoney, cur)}'),
+                value: _usePoints,
+                onChanged: (v) => setState(() => _usePoints = v),
+              ),
+            if (pkg != null)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('${L(app, 'Use package', 'पैकेज इस्तेमाल करें')}: ${pkg.$1.name}'),
+                subtitle: Text('${pkg.$2.toStringAsFixed(1)} ${pkg.$1.unit} · −${money(pkg.$3, cur)} · ${L(app, 'left', 'बाकी')} ${pkg.$1.remaining.toStringAsFixed(1)}'),
+                value: _usePackage,
+                onChanged: (v) => setState(() => _usePackage = v),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
           title: t('orderOptions'),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             if (branches.length > 1)
@@ -227,6 +271,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   if (v) _home = true;
                 }),
               ),
+              if (_pickup)
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final sl in const ['9–12', '12–3', '3–6', '6–9']) Pill(label: sl, on: _slot == sl, onTap: () => setState(() => _slot = sl)),
+                ]),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(t('homeDelivery')),
@@ -291,6 +339,22 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
         ),
       ),
     );
+  }
+
+  /// (package, qty covered, value) for the selected customer's active package.
+  (CustPackage, double, double)? _packageUse(ShopData d) {
+    final c = _customer;
+    if (c == null) return null;
+    for (final p in c.packages) {
+      if (p.remaining <= 0 || p.end.isBefore(DateTime.now())) continue;
+      final match = _lines.where((l) => l.service == p.service && l.unit == p.unit).toList();
+      if (match.isEmpty) continue;
+      final qty = match.fold<double>(0, (s, l) => s + l.qty);
+      final covered = qty < p.remaining ? qty : p.remaining;
+      final rate = match.first.rate;
+      return (p, covered, (covered * rate).roundToDouble());
+    }
+    return null;
   }
 
   void _add(Garment g, double rate) {
@@ -358,6 +422,16 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       return;
     }
     final d = app.data!;
+    // offers (same maths as the screen)
+    final sub = _lines.fold<double>(0, (s, l) => s + l.amount);
+    final exp = _express ? sub * d.expressPct / 100 : 0.0;
+    final disc0 = double.tryParse(_discount.text.trim()) ?? 0;
+    final couponAmt = _coupon.text.trim().isEmpty ? 0.0 : d.couponDiscount(_coupon.text, _customer, sub);
+    final couponOk = couponAmt > 0;
+    final pkg = _packageUse(d);
+    final room = (sub + exp - disc0 - couponAmt - (_usePackage && pkg != null ? pkg.$3 : 0)).clamp(0, double.infinity).toDouble();
+    final pm = d.pointsMoney(_customer);
+    final pointsAmt = _usePoints ? (pm < room ? pm : room) : 0.0;
     final o = d.createOrder(
       customerId: _customer!.id,
       branchId: _branchId ?? d.branches.first.id,
@@ -371,6 +445,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       advance: double.tryParse(_advance.text.trim()) ?? 0,
       advanceMode: _mode,
       notes: _notes.text.trim(),
+      couponCode: couponOk ? _coupon.text.trim().toUpperCase() : '',
+      couponAmount: couponOk ? couponAmt : 0,
+      pointsUsed: pointsAmt,
+      package: _usePackage ? pkg?.$1 : null,
+      packageQty: _usePackage && pkg != null ? pkg.$2 : 0,
+      packageValue: _usePackage && pkg != null ? pkg.$3 : 0,
+      slot: _pickup ? _slot : '',
     );
     toast(context, t('orderCreated').replaceAll('{c}', o.code));
     final pr = ThermalPrinter.instance;

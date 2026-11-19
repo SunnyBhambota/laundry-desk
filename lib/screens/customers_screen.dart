@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'new_order_screen.dart';
+import 'v04_screens.dart';
 import 'orders_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
@@ -168,11 +169,16 @@ class CustomerDetailScreen extends StatelessWidget {
                 icon: const Icon(Icons.chat_outlined, size: 18),
                 label: const Text('WhatsApp'),
               ),
-              if (c.address.isNotEmpty)
-                OutlinedButton.icon(onPressed: () => openMaps(c.address), icon: const Icon(Icons.map_outlined, size: 18), label: Text(t('map'))),
+              if (c.address.isNotEmpty || c.hasLocation)
+                OutlinedButton.icon(
+                    onPressed: () => openMaps(c.hasLocation ? '${c.lat},${c.lng}' : c.address),
+                    icon: const Icon(Icons.map_outlined, size: 18),
+                    label: Text(t('map'))),
             ]),
           ]),
         ),
+        const SizedBox(height: 12),
+        CustomerExtrasCard(customerId: c.id),
         const SizedBox(height: 12),
         Row(children: [
           stat(t('orders'), '${orders.length}'),

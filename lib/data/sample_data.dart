@@ -245,6 +245,37 @@ class SampleData {
       Payout(id: 'demo_p1', staffId: 'demo_s4', month: monthKey(now), kind: 'advance', amount: 2000, at: now.subtract(const Duration(days: 10))),
       Payout(id: 'demo_p2', staffId: 'demo_s3', month: monthKey(now), kind: 'advance', amount: 1500, at: now.subtract(const Duration(days: 6))),
     ]);
+    // offers, packages, stock (v0.4)
+    d.coupons.addAll([
+      Coupon(id: 'demo_cp1', code: 'DIWALI10', kind: 'pct', value: 10, minOrder: 300, validTill: now.add(const Duration(days: 20))),
+      Coupon(id: 'demo_cp2', code: 'FIRST50', kind: 'flat', value: 50, onlyNew: true),
+    ]);
+    d.packagePlans.addAll([
+      PackagePlan(id: 'demo_pk1', name: 'Family 30 kg', service: 'Wash & fold', unit: 'kg', credits: 30, price: 1999),
+      PackagePlan(id: 'demo_pk2', name: 'Office shirts 40', service: 'Wash & iron', unit: 'pc', credits: 40, price: 1499),
+    ]);
+    for (var i = 0; i < d.customers.length; i++) {
+      d.customers[i].points = (i * 37 % 140).toDouble();
+      if (i < 9) {
+        d.customers[i].lat = 19.13 + (i * 0.007) % 0.05;
+        d.customers[i].lng = 72.82 + (i * 0.011) % 0.06;
+      }
+    }
+    d.customers[0].packages.add(CustPackage(
+        id: 'demo_cpk1', name: 'Family 30 kg', service: 'Wash & fold', unit: 'kg', credits: 30, remaining: 22, price: 1999,
+        start: now.subtract(const Duration(days: 8)), end: now.add(const Duration(days: 22))));
+    d.suppliers.addAll([
+      Supplier(id: 'demo_su1', name: 'Shree Chemicals', phone: '9820099001', items: 'Detergent, solvent, stain remover'),
+      Supplier(id: 'demo_su2', name: 'Mumbai Packaging', phone: '9820099002', items: 'Hangers, poly covers, tag rolls'),
+    ]);
+    d.stock.addAll([
+      StockItem(id: 'demo_st1', name: 'Liquid detergent', unit: 'L', qty: 6, minQty: 10, branchId: main),
+      StockItem(id: 'demo_st2', name: 'Hangers', unit: 'pc', qty: 40, minQty: 100, branchId: main),
+      StockItem(id: 'demo_st3', name: 'Dry clean solvent', unit: 'L', qty: 45, minQty: 20, branchId: main),
+      StockItem(id: 'demo_st4', name: 'Poly covers', unit: 'pc', qty: 800, minQty: 200, branchId: main),
+      StockItem(id: 'demo_st5', name: 'Tag rolls (printer)', unit: 'roll', qty: 12, minQty: 4, branchId: main),
+    ]);
+    d.stockMoves.add(StockMove(id: 'demo_sm1', itemId: 'demo_st1', qty: 20, at: now.subtract(const Duration(days: 9)), by: 'owner', supplierId: 'demo_su1', cost: 3200));
     d.hasSample = true;
     d.changed();
   }

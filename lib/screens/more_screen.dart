@@ -14,6 +14,7 @@ import 'delivery_screen.dart';
 import 'issue_screens.dart';
 import 'payroll_screens.dart';
 import 'v03_screens.dart';
+import 'v04_screens.dart';
 import '../data/issue_models.dart';
 import 'reports_screen.dart';
 
@@ -76,6 +77,11 @@ class _MoreScreenState extends State<MoreScreen> {
           group([
             tile(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
             if (app.module('delivery')) tile(Icons.delivery_dining_outlined, t('delivery'), () => go(const DeliveryBoardScreen())),
+            if (app.module('delivery')) tile(Icons.map_outlined, L(app, 'Live map & route', 'लाइव मैप और रूट'), () => go(const RouteMapScreen())),
+            if (app.module('loyalty')) tile(Icons.local_offer_outlined, L(app, 'Offers, points & packages', 'ऑफ़र, पॉइंट और पैकेज'), () => go(const OffersScreen())),
+            if (app.module('stock') && app.canManage)
+              tile(Icons.inventory_2_outlined, L(app, 'Stock & suppliers', 'स्टॉक और सप्लायर'), () => go(const StockScreen()),
+                  sub: d.lowStock.isEmpty ? null : '${d.lowStock.length} ${L(app, 'running low', 'खत्म होने वाले')}'),
             tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen())),
             tile(Icons.print_outlined, L(app, 'Printer & UPI', 'प्रिंटर और UPI'), () => go(const PrinterScreen())),
             tile(Icons.report_problem_outlined, L(app, 'Complaints & issues', 'शिकायतें और इश्यू'), () => go(const IssuesScreen())),
@@ -92,7 +98,10 @@ class _MoreScreenState extends State<MoreScreen> {
             tile(Icons.tune_rounded, t('settings'), () => go(const SettingsScreen()), sub: '${t('shopCode')}: ${d.shopCode}'),
           ]),
         if (app.role == Role.washer || app.role == Role.delivery)
-          group([tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen()))]),
+          group([
+            tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen())),
+            if (app.role == Role.delivery) tile(Icons.route_outlined, L(app, 'My route (nearest first)', 'मेरा रूट (पास वाला पहले)'), () => go(RouteMapScreen(agentId: app.staffUser!.id))),
+          ]),
         if (!app.isOwner && (d.rules['showEarnings'] as bool? ?? true))
           group([
             tile(Icons.savings_outlined, L(app, 'My earnings', 'मेरी कमाई'),

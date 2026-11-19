@@ -24,7 +24,7 @@ class CloudSync {
   /// false for staff: they may not write settings, staff, branches, rates or expenses.
   bool admin = true;
 
-  static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts'};
+  static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts', 'coupons', 'packagePlans', 'stock', 'stockMoves', 'suppliers'};
   static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues'};
   static const allCols = [...adminCols, ...memberCols];
 
@@ -86,6 +86,21 @@ class CloudSync {
     for (final x in d.payouts) {
       m['payouts/${x.id}'] = x.toJson();
     }
+    for (final x in d.coupons) {
+      m['coupons/${x.id}'] = x.toJson();
+    }
+    for (final x in d.packagePlans) {
+      m['packagePlans/${x.id}'] = x.toJson();
+    }
+    for (final x in d.stock) {
+      m['stock/${x.id}'] = x.toJson();
+    }
+    for (final x in d.stockMoves) {
+      m['stockMoves/${x.id}'] = x.toJson();
+    }
+    for (final x in d.suppliers) {
+      m['suppliers/${x.id}'] = x.toJson();
+    }
     d.pings.forEach((k, v) => m['pings/$k'] = {'list': v.map((p) => p.toJson()).toList()});
     m['meta/settings'] = d.settingsJson();
     m['meta/counter'] = {'nextNumber': d.nextNumber};
@@ -133,6 +148,16 @@ class CloudSync {
         put<Issue>(d.issues, Issue.fromJson, (x) => x.id == id);
       case 'payouts':
         put<Payout>(d.payouts, Payout.fromJson, (x) => x.id == id);
+      case 'coupons':
+        put<Coupon>(d.coupons, Coupon.fromJson, (x) => x.id == id);
+      case 'packagePlans':
+        put<PackagePlan>(d.packagePlans, PackagePlan.fromJson, (x) => x.id == id);
+      case 'stock':
+        put<StockItem>(d.stock, StockItem.fromJson, (x) => x.id == id);
+      case 'stockMoves':
+        put<StockMove>(d.stockMoves, StockMove.fromJson, (x) => x.id == id);
+      case 'suppliers':
+        put<Supplier>(d.suppliers, Supplier.fromJson, (x) => x.id == id);
       case 'pings':
         if (j == null) {
           d.pings.remove(id);
@@ -195,6 +220,16 @@ class CloudSync {
         d.issues.clear();
       case 'payouts':
         d.payouts.clear();
+      case 'coupons':
+        d.coupons.clear();
+      case 'packagePlans':
+        d.packagePlans.clear();
+      case 'stock':
+        d.stock.clear();
+      case 'stockMoves':
+        d.stockMoves.clear();
+      case 'suppliers':
+        d.suppliers.clear();
     }
   }
 

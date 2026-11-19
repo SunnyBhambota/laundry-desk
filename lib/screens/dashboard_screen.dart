@@ -13,6 +13,7 @@ import 'admin_screens.dart';
 import 'customers_screen.dart';
 import 'delivery_screen.dart';
 import 'issue_screens.dart';
+import 'v04_screens.dart';
 import 'new_order_screen.dart';
 import 'orders_screen.dart';
 import 'reports_screen.dart';
@@ -233,6 +234,22 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 );
               }),
+              if (app.module('stock') && app.canManage && d.lowStock.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: const Color(0xFFFFF4D6),
+                    borderRadius: BorderRadius.circular(14),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF8A5A00)),
+                      title: Text('${L(app, 'Stock running low', 'स्टॉक खत्म हो रहा है')}: ${d.lowStock.map((s) => s.name).take(3).join(', ')}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF8A5A00))),
+                      trailing: const Icon(Icons.chevron_right, color: Color(0xFF8A5A00)),
+                      onTap: () => go(const StockScreen()),
+                    ),
+                  ),
+                ),
               if (d.hasSample) ...[
                 const SizedBox(height: 12),
                 Container(

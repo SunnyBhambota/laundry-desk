@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -162,6 +163,50 @@ class AuthService {
       }
     }
     throw AuthError('wrong');
+  }
+
+  // ---------- Google ----------
+
+  /// Owner sign-in / sign-up with a Google account (cloud mode only).
+  /// Returns null when the user closes the Google chooser.
+  Future<Owner?> signInWithGoogle() async {
+    if (!_cloud) throw AuthError('cloudOnly');
+    try {
+      final g = GoogleSignIn(serverClientId: AppConfig.googleWebClientId, scopes: const ['email']);
+      try {
+        await g.signOut(); // always show the account chooser
+      } catch (_) {}
+      final acc = await g.signIn();
+      if (acc == null) return null;
+      final auth = await acc.authentication;
+      final cred = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
+      final res = await FirebaseAuth.instance.signInWithCredential(cred);
+      final u = res.user!;
+      final ref = FirebaseFirestore.instance.collection('owners').doc(u.uid);
+      final doc = await ref.get();
+      if (!doc.exists) {
+        final owner = Owner(uid: u.uid, name: u.displayName ?? acc.displayName ?? '', mobile: '', email: u.email ?? acc.email);
+        await ref.set({...owner.toJson(), 'via': 'google', 'createdAt': FieldValue.serverTimestamp()});
+        return owner;
+      }
+      return Owner.fromJson({...doc.data()!, 'uid': u.uid});
+    } on FirebaseAuthException catch (e) {
+      throw AuthError(e.code == 'operation-not-allowed' ? 'googleOff' : _mapFirebase(e.code));
+    } on AuthError {
+      rethrow;
+    } catch (e) {
+      final m = e.toString();
+      if (m.contains('network')) throw AuthError('network');
+      if (m.contains('ApiException: 10') || m.contains('sign_in_failed')) throw AuthError('googleOff');
+      throw AuthError('generic');
+    }
+  }
+
+  /// Saves the mobile number for owners who joined with Google.
+  Future<void> saveOwnerMobile(Owner o, String mobile) async {
+    if (_cloud) {
+      await FirebaseFirestore.instance.collection('owners').doc(o.uid).set({'mobile': mobile}, SetOptions(merge: true));
+    }
   }
 
   // ---------- helpers ----------

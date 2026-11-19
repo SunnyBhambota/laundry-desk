@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
 import '../models/models.dart';
+import '../services/auth_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -20,6 +21,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
   final _shop = TextEditingController();
   final _address = TextEditingController();
   final _referral = TextEditingController();
+  final _mobile = TextEditingController();
   final Set<String> _services = {'Wash & fold', 'Dry clean', 'Steam iron'};
   String _branches = '1';
   String _team = '1–3';
@@ -47,7 +49,18 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
       toast(context, app.t('needService'));
       return;
     }
+    final needMobile = app.owner != null && app.owner!.mobile.isEmpty;
+    final digits = _mobile.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (needMobile && digits.length < 10) {
+      toast(context, app.t('err.mobile'));
+      return;
+    }
     setState(() => _saving = true);
+    if (needMobile) {
+      final full = digits.length == 10 ? '91$digits' : digits;
+      await AuthService.instance.saveOwnerMobile(app.owner!, full);
+      app.owner = Owner(uid: app.owner!.uid, name: app.owner!.name, mobile: full, email: app.owner!.email);
+    }
     await app.saveShop(ShopProfile(
       shopName: _shop.text.trim(),
       services: AppConfig.services.where(_services.contains).toList(),
@@ -169,6 +182,10 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
               ),
             ),
             const SizedBox(height: 14),
+            if (app.owner != null && app.owner!.mobile.isEmpty) ...[
+              GlassField(controller: _mobile, hint: t('mobile'), icon: Icons.phone_iphone_rounded),
+              const SizedBox(height: 10),
+            ],
             GlassField(controller: _address, hint: t('address'), icon: Icons.place_outlined),
             const SizedBox(height: 10),
             Container(

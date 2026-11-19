@@ -239,4 +239,74 @@ void main() {
     expect(bytes.length, greaterThan(200));
     expect(p.tagBytes(d: d, o: o).length, greaterThan(100));
   });
+
+  test('v0.4: coupon, points, package, stock, location, cloud json', () async {
+    final d = ShopData('local_v04');
+    final shop = _shop();
+    await d.initialise(shop);
+    d.taxPct = 0;
+    final c = d.addCustomer(name: 'Asha', phone: '9876511111');
+    d.coupons.add(Coupon(id: 'cp1', code: 'FIRST50', kind: 'flat', value: 50, minOrder: 200, onlyNew: true));
+    expect(d.couponDiscount('first50', c, 300), 50);
+    expect(d.couponDiscount('FIRST50', c, 150), 0); // below minimum
+    final o = d.createOrder(
+      customerId: c.id,
+      branchId: d.branches.first.id,
+      lines: [OrderLine(garment: 'Shirt', service: 'Wash & iron', qty: 10, rate: 30)],
+      by: 'owner',
+      couponCode: 'FIRST50',
+      couponAmount: 50,
+    );
+    expect(o.total, 250);
+    expect(d.couponUses('FIRST50'), 1);
+    expect(d.couponDiscount('FIRST50', c, 300), 0); // not new any more
+    d.pointsPer100 = 1;
+    d.setStatus(o, 'delivered', by: 'owner');
+    expect(c.points, 2);
+    c.points = 60;
+    d.minRedeem = 50;
+    d.pointValue = 1;
+    expect(d.pointsMoney(c), 60);
+    final plan = PackagePlan(id: 'pk1', name: 'Family 30 kg', service: 'Wash & fold', unit: 'kg', credits: 30, price: 1200);
+    final sold = d.sellPackage(c, plan, by: 'owner', branchId: d.branches.first.id);
+    expect(sold.due, 0);
+    final pk = c.activePackage('Wash & fold', 'kg');
+    expect(pk, isNotNull);
+    final o2 = d.createOrder(
+      customerId: c.id,
+      branchId: d.branches.first.id,
+      lines: [OrderLine(garment: 'Mixed', service: 'Wash & fold', qty: 5, rate: 40, unit: 'kg')],
+      by: 'owner',
+      package: pk,
+      packageQty: 5,
+      packageValue: 200,
+      pointsUsed: 20,
+    );
+    expect(o2.offers, 220);
+    expect(pk!.remaining, 25);
+    expect(c.points, 40);
+    final it = d.addStockItem('Detergent', 'kg', qty: 10, minQty: 5);
+    final before = d.expenses.length;
+    d.moveStock(it, -6, by: 'owner');
+    expect(d.lowStock.map((s) => s.name), ['Detergent']);
+    d.moveStock(it, 20, by: 'owner', cost: 1500);
+    expect(it.qty, 24);
+    expect(d.expenses.length, before + 1);
+    expect(d.lowStock, isEmpty);
+    d.setCustomerLocation(c.id, 19.1, 72.9);
+    d.setCustomerLocation(c.id, 1, 1, onlyIfMissing: true);
+    expect(c.lat, 19.1);
+    final back = Customer.fromJson(c.toJson());
+    expect(back.points, 40);
+    expect(back.packages.single.remaining, 25);
+    expect(LaundryOrder.fromJson(o.toJson()).couponCode, 'FIRST50');
+    final sample = ShopData('local_v04s');
+    await sample.initialise(shop);
+    SampleData.fill(sample, services: shop.services);
+    expect(sample.coupons, isNotEmpty);
+    expect(sample.stock, isNotEmpty);
+    sample.clearSample();
+    expect(sample.coupons.where((x) => x.id.startsWith('demo_')), isEmpty);
+  });
 }
+

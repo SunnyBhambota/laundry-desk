@@ -141,6 +141,9 @@ class ThermalPrinter {
     e.line();
     if (o.express) e.lr('Express', money(o.expressCharge, cur));
     if (o.discount > 0) e.lr('Discount', '-${money(o.discount, cur)}');
+    if (o.couponAmount > 0) e.lr('Coupon ${o.couponCode}', '-${money(o.couponAmount, cur)}');
+    if (o.pointsUsed > 0) e.lr('Points', '-${money(o.pointsUsed, cur)}');
+    if (o.packageValue > 0) e.lr('Package', '-${money(o.packageValue, cur)}');
     if (o.tax > 0) e.lr('GST ${o.taxPct.toStringAsFixed(0)}%', money(o.tax, cur));
     e
       ..bold(true)

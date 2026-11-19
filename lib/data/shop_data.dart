@@ -42,6 +42,15 @@ class ShopData extends ChangeNotifier {
   List<Activity> activity = [];
   List<Issue> issues = [];
   List<Payout> payouts = [];
+  List<Coupon> coupons = [];
+  List<PackagePlan> packagePlans = [];
+  List<StockItem> stock = [];
+  List<StockMove> stockMoves = [];
+  List<Supplier> suppliers = [];
+  /// Loyalty: points per ₹100, value of 1 point, minimum points to redeem (0 per100 = off).
+  double pointsPer100 = 1;
+  double pointValue = 1;
+  double minRedeem = 50;
   /// Delivery staff GPS trail: staffId → points (last 200 each).
   Map<String, List<Ping>> pings = {};
   /// Owner app-lock PIN (salted hash, empty = off).
@@ -115,6 +124,7 @@ class ShopData extends ChangeNotifier {
         'rules': rules,
         'typeDiscount': typeDiscount,
         'upiId': upiId,
+        'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -133,6 +143,14 @@ class ShopData extends ChangeNotifier {
       typeDiscount = Map<String, dynamic>.from(j['typeDiscount'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
     }
     upiId = j['upiId'] as String? ?? upiId;
+    _loyalty(j['loyalty']);
+  }
+
+  void _loyalty(Object? l) {
+    if (l is! Map) return;
+    pointsPer100 = (l['per100'] as num?)?.toDouble() ?? pointsPer100;
+    pointValue = (l['value'] as num?)?.toDouble() ?? pointValue;
+    minRedeem = (l['min'] as num?)?.toDouble() ?? minRedeem;
   }
 
   /// Staff PIN hash (same formula in Firestore rules check via staffKeys).
@@ -259,6 +277,12 @@ class ShopData extends ChangeNotifier {
         'rules': rules,
         'typeDiscount': typeDiscount,
         'upiId': upiId,
+        'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
+        'coupons': coupons.map((e) => e.toJson()).toList(),
+        'packagePlans': packagePlans.map((e) => e.toJson()).toList(),
+        'stock': stock.map((e) => e.toJson()).toList(),
+        'stockMoves': stockMoves.map((e) => e.toJson()).toList(),
+        'suppliers': suppliers.map((e) => e.toJson()).toList(),
         'issues': issues.map((e) => e.toJson()).toList(),
         'payouts': payouts.map((e) => e.toJson()).toList(),
       };
@@ -292,6 +316,12 @@ class ShopData extends ChangeNotifier {
       typeDiscount = Map<String, dynamic>.from(j['typeDiscount'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
     }
     upiId = j['upiId'] as String? ?? '';
+    _loyalty(j['loyalty']);
+    coupons = list('coupons').map(Coupon.fromJson).toList();
+    packagePlans = list('packagePlans').map(PackagePlan.fromJson).toList();
+    stock = list('stock').map(StockItem.fromJson).toList();
+    stockMoves = list('stockMoves').map(StockMove.fromJson).toList();
+    suppliers = list('suppliers').map(Supplier.fromJson).toList();
     issues = list('issues').map(Issue.fromJson).toList();
     payouts = list('payouts').map(Payout.fromJson).toList();
   }
@@ -384,6 +414,14 @@ class ShopData extends ChangeNotifier {
     String advanceMode = 'cash',
     String notes = '',
     String pickupAgent = '',
+    String couponCode = '',
+    double couponAmount = 0,
+    double pointsUsed = 0,
+    CustPackage? package,
+    double packageQty = 0,
+    double packageValue = 0,
+    String slot = '',
+    DateTime? pickupAt,
   }) {
     final now = DateTime.now();
     final status = pickup ? 'pickup' : 'received';
@@ -404,8 +442,20 @@ class ShopData extends ChangeNotifier {
       notes: notes,
       createdBy: by,
       pickupAgent: pickupAgent,
+      couponCode: couponCode,
+      couponAmount: couponAmount,
+      pointsUsed: pointsUsed,
+      packageValue: packageValue,
+      packageNote: package == null ? '' : '${package.name}: ${packageQty.toStringAsFixed(1)} ${package.unit}',
+      slot: slot,
+      pickupAt: pickupAt,
       history: [StatusEvent(status: status, at: now, by: by)],
     );
+    final cust = customer(customerId);
+    if (cust != null) {
+      if (pointsUsed > 0 && pointValue > 0) cust.points = (cust.points - pointsUsed / pointValue).clamp(0, double.infinity).toDouble();
+      if (package != null && packageQty > 0) package.remaining = (package.remaining - packageQty).clamp(0, double.infinity).toDouble();
+    }
     if (advance > 0) o.payments.add(Payment(amount: advance, mode: advanceMode, at: now, by: by, note: 'advance'));
     orders.add(o);
     log(by, 'order.new', orderId: o.id, text: o.code);
@@ -415,6 +465,11 @@ class ShopData extends ChangeNotifier {
   }
 
   void setStatus(LaundryOrder o, String status, {required String by, String note = ''}) {
+    if (status == 'delivered' && o.status != 'delivered' && pointsPer100 > 0) {
+      final c = customer(o.customerId);
+      final earn = (o.total / 100).floorToDouble() * pointsPer100;
+      if (c != null && earn > 0) c.points += earn;
+    }
     o.status = status;
     o.history.add(StatusEvent(status: status, at: DateTime.now(), by: by, note: note));
     log(by, status == 'delivered' && o.homeDelivery ? 'delivery.done' : (status == 'received' && o.timeOf('pickup') != null ? 'pickup.done' : 'status.$status'),
@@ -515,6 +570,87 @@ class ShopData extends ChangeNotifier {
     o.payments.add(Payment(amount: -amount, mode: mode, at: DateTime.now(), by: by, note: note.isEmpty ? 'refund' : 'refund: $note'));
     o.history.add(StatusEvent(status: 'refund', at: DateTime.now(), by: by, note: amount.toStringAsFixed(0)));
     log(by, 'refund', orderId: o.id, text: amount.toStringAsFixed(0));
+    changed();
+  }
+
+  // ---------------- v0.4: offers, packages, stock, locations ----------------
+
+  Coupon? couponByCode(String code) => coupons.where((c) => c.code.toUpperCase() == code.trim().toUpperCase()).firstOrNull;
+
+  /// Discount from a coupon for this customer and amount (0 if not valid).
+  double couponDiscount(String code, Customer? c, double amount) {
+    final cp = couponByCode(code);
+    if (cp == null || !cp.valid) return 0;
+    if (cp.onlyNew && c != null && orders.any((o) => o.customerId == c.id && o.status != 'cancelled')) return 0;
+    return cp.discountOn(amount);
+  }
+
+  int couponUses(String code) => orders.where((o) => o.couponCode.toUpperCase() == code.toUpperCase() && o.status != 'cancelled').length;
+
+  /// Points money a customer can use now.
+  double pointsMoney(Customer? c) => (c == null || c.points < minRedeem) ? 0 : (c.points * pointValue).floorToDouble();
+
+  /// Sell a package: recorded as a paid order so it shows in sales.
+  LaundryOrder sellPackage(Customer c, PackagePlan plan, {required String by, required String branchId, String mode = 'cash'}) {
+    final now = DateTime.now();
+    c.packages.add(CustPackage(
+      id: newId('cp'),
+      name: plan.name,
+      service: plan.service,
+      unit: plan.unit,
+      credits: plan.credits,
+      remaining: plan.credits,
+      price: plan.price,
+      start: now,
+      end: now.add(Duration(days: plan.days)),
+    ));
+    final o = createOrder(
+      customerId: c.id,
+      branchId: branchId,
+      lines: [OrderLine(garment: 'Package: ${plan.name}', service: plan.service, qty: 1, rate: plan.price, unit: 'pack')],
+      by: by,
+      advance: plan.price,
+      advanceMode: mode,
+      notes: '${plan.credits.toStringAsFixed(0)} ${plan.unit} · ${plan.days} days',
+    );
+    o.status = 'delivered';
+    o.history.add(StatusEvent(status: 'delivered', at: now, by: by, note: 'package'));
+    changed();
+    return o;
+  }
+
+  StockItem addStockItem(String name, String unit, {double qty = 0, double minQty = 0, String branchId = ''}) {
+    final it = StockItem(id: newId('st'), name: name.trim(), unit: unit, qty: qty, minQty: minQty, branchId: branchId);
+    stock.add(it);
+    changed();
+    return it;
+  }
+
+  /// qty > 0 bought (adds an expense when cost > 0), qty < 0 used.
+  void moveStock(StockItem it, double qty, {required String by, String supplierId = '', double cost = 0, String note = ''}) {
+    it.qty += qty;
+    stockMoves.add(StockMove(id: newId('sm'), itemId: it.id, qty: qty, at: DateTime.now(), by: by, supplierId: supplierId, cost: cost, note: note));
+    if (qty > 0 && cost > 0) {
+      expenses.add(Expense(
+        id: newId('e'),
+        branchId: it.branchId.isEmpty ? branches.first.id : it.branchId,
+        category: 'Stock purchase',
+        amount: cost,
+        at: DateTime.now(),
+        note: '${it.name} +${qty.toStringAsFixed(0)} ${it.unit}${supplierId.isEmpty ? '' : ' · ${suppliers.where((s) => s.id == supplierId).firstOrNull?.name ?? ''}'}',
+      ));
+    }
+    changed();
+  }
+
+  List<StockItem> get lowStock => stock.where((s) => s.low).toList();
+
+  void setCustomerLocation(String customerId, double lat, double lng, {bool onlyIfMissing = false}) {
+    final c = customer(customerId);
+    if (c == null || (onlyIfMissing && c.hasLocation)) return;
+    c
+      ..lat = lat
+      ..lng = lng;
     changed();
   }
 
@@ -732,6 +868,11 @@ class ShopData extends ChangeNotifier {
     activity.removeWhere((a) => a.by.startsWith('demo_') || a.orderId.startsWith('demo_'));
     pings.removeWhere((k, _) => k.startsWith('demo_'));
     issues.removeWhere((i) => i.id.startsWith('demo_'));
+    coupons.removeWhere((x) => x.id.startsWith('demo_'));
+    packagePlans.removeWhere((x) => x.id.startsWith('demo_'));
+    stock.removeWhere((x) => x.id.startsWith('demo_'));
+    stockMoves.removeWhere((x) => x.id.startsWith('demo_'));
+    suppliers.removeWhere((x) => x.id.startsWith('demo_'));
     payouts.removeWhere((p) => p.id.startsWith('demo_'));
     hasSample = false;
     if (orders.isEmpty) nextNumber = 1;

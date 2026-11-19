@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../data/ops_models.dart';
@@ -13,6 +14,8 @@ class TrackingService {
   static final TrackingService instance = TrackingService._();
 
   Timer? _timer;
+  StreamSubscription<Position>? _stream;
+  DateTime _lastSaved = DateTime(2000);
   String? _staffId;
   ShopData? _data;
   bool denied = false;
@@ -50,6 +53,34 @@ class TrackingService {
     _staffId = staffId;
     await _tick();
     _timer = Timer.periodic(const Duration(minutes: 2), (_) => _tick());
+    _background();
+  }
+
+  /// Keeps location coming while the phone is locked / app in background.
+  /// Android shows a small "Laundry Desk is sharing duty location" notification.
+  void _background() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final settings = AndroidSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 50,
+        intervalDuration: const Duration(minutes: 2),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationTitle: 'Laundry Desk · on duty',
+          notificationText: 'Sharing your location with the shop while on duty',
+          enableWakeLock: true,
+        ),
+      );
+      _stream = Geolocator.getPositionStream(locationSettings: settings).listen((pos) {
+        final d = _data, id = _staffId;
+        if (d == null || id == null) return;
+        final a = d.todayAttendance(id);
+        if (a == null || a.outAt != null) return;
+        if (DateTime.now().difference(_lastSaved).inSeconds < 90) return;
+        _lastSaved = DateTime.now();
+        d.addPing(id, Ping(lat: pos.latitude, lng: pos.longitude, at: DateTime.now()));
+      }, onError: (_) {});
+    } catch (_) {}
   }
 
   Future<void> _tick() async {
@@ -57,8 +88,12 @@ class TrackingService {
     if (d == null || id == null) return;
     final a = d.todayAttendance(id);
     if (a == null || a.outAt != null) return; // only while on duty
+    if (DateTime.now().difference(_lastSaved).inSeconds < 90) return;
     final p = await current();
-    if (p != null) d.addPing(id, p);
+    if (p != null) {
+      _lastSaved = DateTime.now();
+      d.addPing(id, p);
+    }
   }
 
   /// Location at handover, saved on the order as proof.
@@ -67,11 +102,15 @@ class TrackingService {
     if (p == null) return;
     o.proof = p;
     d.addPing(staffId, p);
+    // first handover at a customer's door also pins their address on the map
+    d.setCustomerLocation(o.customerId, p.lat, p.lng, onlyIfMissing: true);
   }
 
   void stop() {
     _timer?.cancel();
     _timer = null;
+    _stream?.cancel();
+    _stream = null;
     _staffId = null;
     _data = null;
   }

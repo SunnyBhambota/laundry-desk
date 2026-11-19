@@ -16,6 +16,9 @@ class Messages {
     b.writeln('');
     if (o.express) b.writeln('Express: ${money(o.expressCharge, currency)}');
     if (o.discount > 0) b.writeln('Discount: -${money(o.discount, currency)}');
+    if (o.couponAmount > 0) b.writeln('Coupon ${o.couponCode}: -${money(o.couponAmount, currency)}');
+    if (o.pointsUsed > 0) b.writeln('Loyalty points: -${money(o.pointsUsed, currency)}');
+    if (o.packageValue > 0) b.writeln('Package (${o.packageNote}): -${money(o.packageValue, currency)}');
     if (o.tax > 0) b.writeln('GST ${o.taxPct.toStringAsFixed(0)}%: ${money(o.tax, currency)}');
     b
       ..writeln('*Total: ${money(o.total, currency)}*')

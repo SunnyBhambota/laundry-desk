@@ -4,7 +4,7 @@ class AppConfig {
 
   static const appName = 'Laundry Desk';
   static const company = 'BrotriX Technologies';
-  static const version = '0.3.0';
+  static const version = '0.4.0';
 
   /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).
   /// If these are emptied the app runs in DEMO MODE (data only on this phone).
@@ -13,6 +13,9 @@ class AppConfig {
   static const firebaseSenderId = '356269298314';
   static const firebaseProjectId = 'laundry-desk-4308f';
   static const firebaseStorageBucket = 'laundry-desk-4308f.firebasestorage.app';
+
+  /// OAuth web client (from google-services.json, client_type 3) for Google sign-in.
+  static const googleWebClientId = '356269298314-lou2tv40t4adjv8f8nb5ugpsp3bfgia7.apps.googleusercontent.com';
 
   static bool get firebaseReady =>
       firebaseApiKey.isNotEmpty && firebaseAppId.isNotEmpty && firebaseProjectId.isNotEmpty;
@@ -47,6 +50,8 @@ class AppConfig {
     'barcode',
     'multiBranch',
     'advancedReports',
+    'loyalty',
+    'stock',
   ];
 
   static const services = [

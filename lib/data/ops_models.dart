@@ -36,6 +36,7 @@ const expenseCategories = [
   'Maintenance',
   'Fuel & transport',
   'Packaging',
+  'Stock purchase',
   'Other',
 ];
 
@@ -63,8 +64,13 @@ class Customer {
     this.address = '',
     this.type = 'regular', // regular | vip | business
     this.notes = '',
+    this.lat,
+    this.lng,
+    this.points = 0,
+    List<CustPackage>? packages,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : packages = packages ?? [],
+        createdAt = createdAt ?? DateTime.now();
 
   final String id;
   String name;
@@ -72,7 +78,16 @@ class Customer {
   String address;
   String type;
   String notes;
+  double? lat;
+  double? lng;
+  double points; // loyalty points
+  final List<CustPackage> packages;
   final DateTime createdAt;
+
+  bool get hasLocation => lat != null && lng != null;
+  CustPackage? activePackage(String service, String unit) => packages
+      .where((p) => p.service == service && p.unit == unit && p.remaining > 0 && p.end.isAfter(DateTime.now()))
+      .firstOrNull;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -81,6 +96,10 @@ class Customer {
         'address': address,
         'type': type,
         'notes': notes,
+        'lat': lat,
+        'lng': lng,
+        'points': points,
+        'packages': packages.map((p) => p.toJson()).toList(),
         'createdAt': createdAt.toIso8601String(),
       };
   factory Customer.fromJson(Map<String, dynamic> j) => Customer(
@@ -90,8 +109,174 @@ class Customer {
         address: j['address'] as String? ?? '',
         type: j['type'] as String? ?? 'regular',
         notes: j['notes'] as String? ?? '',
+        lat: (j['lat'] as num?)?.toDouble(),
+        lng: (j['lng'] as num?)?.toDouble(),
+        points: (j['points'] as num?)?.toDouble() ?? 0,
+        packages: ((j['packages'] as List?) ?? []).map((e) => CustPackage.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
       );
+}
+
+/// A package a customer bought (e.g. 30 kg wash & fold for 30 days).
+class CustPackage {
+  CustPackage({
+    required this.id,
+    required this.name,
+    required this.service,
+    required this.unit,
+    required this.credits,
+    required this.remaining,
+    required this.price,
+    required this.start,
+    required this.end,
+  });
+  final String id;
+  final String name;
+  final String service;
+  final String unit; // kg | pc
+  final double credits;
+  double remaining;
+  final double price;
+  final DateTime start;
+  final DateTime end;
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'service': service,
+        'unit': unit,
+        'credits': credits,
+        'remaining': remaining,
+        'price': price,
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+      };
+  factory CustPackage.fromJson(Map<String, dynamic> j) => CustPackage(
+        id: j['id'] as String? ?? '',
+        name: j['name'] as String? ?? '',
+        service: j['service'] as String? ?? '',
+        unit: j['unit'] as String? ?? 'kg',
+        credits: (j['credits'] as num?)?.toDouble() ?? 0,
+        remaining: (j['remaining'] as num?)?.toDouble() ?? 0,
+        price: (j['price'] as num?)?.toDouble() ?? 0,
+        start: DateTime.tryParse(j['start'] as String? ?? '') ?? DateTime.now(),
+        end: DateTime.tryParse(j['end'] as String? ?? '') ?? DateTime.now(),
+      );
+}
+
+/// Shop offers (owner): coupons and packages for sale.
+class Coupon {
+  Coupon({required this.id, required this.code, required this.kind, required this.value, this.minOrder = 0, this.validTill, this.onlyNew = false, this.active = true});
+  final String id;
+  String code;
+  String kind; // pct | flat
+  double value;
+  double minOrder;
+  DateTime? validTill;
+  bool onlyNew;
+  bool active;
+  bool get valid => active && (validTill == null || validTill!.isAfter(DateTime.now()));
+  double discountOn(double amount) {
+    if (!valid || amount < minOrder) return 0;
+    return kind == 'pct' ? (amount * value / 100).roundToDouble() : (value > amount ? amount : value);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'code': code,
+        'kind': kind,
+        'value': value,
+        'minOrder': minOrder,
+        'validTill': validTill?.toIso8601String(),
+        'onlyNew': onlyNew,
+        'active': active,
+      };
+  factory Coupon.fromJson(Map<String, dynamic> j) => Coupon(
+        id: j['id'] as String,
+        code: j['code'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'pct',
+        value: (j['value'] as num?)?.toDouble() ?? 0,
+        minOrder: (j['minOrder'] as num?)?.toDouble() ?? 0,
+        validTill: DateTime.tryParse(j['validTill'] as String? ?? ''),
+        onlyNew: j['onlyNew'] as bool? ?? false,
+        active: j['active'] as bool? ?? true,
+      );
+}
+
+class PackagePlan {
+  PackagePlan({required this.id, required this.name, required this.service, required this.unit, required this.credits, required this.price, this.days = 30});
+  final String id;
+  String name;
+  String service;
+  String unit;
+  double credits;
+  double price;
+  int days;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'service': service, 'unit': unit, 'credits': credits, 'price': price, 'days': days};
+  factory PackagePlan.fromJson(Map<String, dynamic> j) => PackagePlan(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        service: j['service'] as String? ?? '',
+        unit: j['unit'] as String? ?? 'kg',
+        credits: (j['credits'] as num?)?.toDouble() ?? 0,
+        price: (j['price'] as num?)?.toDouble() ?? 0,
+        days: (j['days'] as num?)?.toInt() ?? 30,
+      );
+}
+
+/// Stock (owner): items, movements, suppliers.
+class StockItem {
+  StockItem({required this.id, required this.name, required this.unit, this.qty = 0, this.minQty = 0, this.branchId = ''});
+  final String id;
+  String name;
+  String unit;
+  double qty;
+  double minQty;
+  String branchId;
+  bool get low => qty <= minQty;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'unit': unit, 'qty': qty, 'minQty': minQty, 'branchId': branchId};
+  factory StockItem.fromJson(Map<String, dynamic> j) => StockItem(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        unit: j['unit'] as String? ?? 'pc',
+        qty: (j['qty'] as num?)?.toDouble() ?? 0,
+        minQty: (j['minQty'] as num?)?.toDouble() ?? 0,
+        branchId: j['branchId'] as String? ?? '',
+      );
+}
+
+class StockMove {
+  StockMove({required this.id, required this.itemId, required this.qty, required this.at, this.by = '', this.supplierId = '', this.cost = 0, this.note = ''});
+  final String id;
+  final String itemId;
+  final double qty; // + in, − used
+  final DateTime at;
+  final String by;
+  final String supplierId;
+  final double cost;
+  final String note;
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'itemId': itemId, 'qty': qty, 'at': at.toIso8601String(), 'by': by, 'supplierId': supplierId, 'cost': cost, 'note': note};
+  factory StockMove.fromJson(Map<String, dynamic> j) => StockMove(
+        id: j['id'] as String,
+        itemId: j['itemId'] as String? ?? '',
+        qty: (j['qty'] as num?)?.toDouble() ?? 0,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        by: j['by'] as String? ?? '',
+        supplierId: j['supplierId'] as String? ?? '',
+        cost: (j['cost'] as num?)?.toDouble() ?? 0,
+        note: j['note'] as String? ?? '',
+      );
+}
+
+class Supplier {
+  Supplier({required this.id, required this.name, this.phone = '', this.items = ''});
+  final String id;
+  String name;
+  String phone;
+  String items;
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'phone': phone, 'items': items};
+  factory Supplier.fromJson(Map<String, dynamic> j) =>
+      Supplier(id: j['id'] as String, name: j['name'] as String? ?? '', phone: j['phone'] as String? ?? '', items: j['items'] as String? ?? '');
 }
 
 /// One garment type on the rate card. `unit` is 'pc' or 'kg' (or 'sqft').
@@ -193,6 +378,13 @@ class LaundryOrder {
     this.notes = '',
     this.createdBy = '',
     this.proof,
+    this.couponCode = '',
+    this.couponAmount = 0,
+    this.pointsUsed = 0,
+    this.packageValue = 0,
+    this.packageNote = '',
+    this.slot = '',
+    this.pickupAt,
     List<Payment>? payments,
     List<StatusEvent>? history,
   })  : payments = payments ?? [],
@@ -217,13 +409,21 @@ class LaundryOrder {
   String notes;
   String createdBy;
   Ping? proof; // where the order was handed over (delivery proof)
+  String couponCode;
+  double couponAmount;
+  double pointsUsed; // money value of loyalty points used
+  double packageValue; // value covered by the customer's package
+  String packageNote;
+  String slot; // pickup slot e.g. 12–3
+  DateTime? pickupAt;
+  double get offers => couponAmount + pointsUsed + packageValue;
   final List<Payment> payments;
   final List<StatusEvent> history;
 
   String get code => 'LD-${number.toString().padLeft(4, '0')}';
   double get subtotal => lines.fold(0, (s, l) => s + l.amount);
   double get expressCharge => express ? subtotal * expressPct / 100 : 0;
-  double get taxable => (subtotal + expressCharge - discount).clamp(0, double.infinity).toDouble();
+  double get taxable => (subtotal + expressCharge - discount - offers).clamp(0, double.infinity).toDouble();
   double get tax => taxable * taxPct / 100;
   double get total => (taxable + tax).roundToDouble();
   double get paid => payments.fold(0, (s, p) => s + p.amount);
@@ -265,6 +465,13 @@ class LaundryOrder {
         'notes': notes,
         'createdBy': createdBy,
         'proof': proof?.toJson(),
+        'couponCode': couponCode,
+        'couponAmount': couponAmount,
+        'pointsUsed': pointsUsed,
+        'packageValue': packageValue,
+        'packageNote': packageNote,
+        'slot': slot,
+        'pickupAt': pickupAt?.toIso8601String(),
         'payments': payments.map((p) => p.toJson()).toList(),
         'history': history.map((h) => h.toJson()).toList(),
       };
@@ -289,6 +496,13 @@ class LaundryOrder {
         notes: j['notes'] as String? ?? '',
         createdBy: j['createdBy'] as String? ?? '',
         proof: j['proof'] is Map ? Ping.fromJson(Map<String, dynamic>.from(j['proof'] as Map)) : null,
+        couponCode: j['couponCode'] as String? ?? '',
+        couponAmount: (j['couponAmount'] as num?)?.toDouble() ?? 0,
+        pointsUsed: (j['pointsUsed'] as num?)?.toDouble() ?? 0,
+        packageValue: (j['packageValue'] as num?)?.toDouble() ?? 0,
+        packageNote: j['packageNote'] as String? ?? '',
+        slot: j['slot'] as String? ?? '',
+        pickupAt: DateTime.tryParse(j['pickupAt'] as String? ?? ''),
         payments: ((j['payments'] as List?) ?? []).map((e) => Payment.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         history: ((j['history'] as List?) ?? []).map((e) => StatusEvent.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
       );
