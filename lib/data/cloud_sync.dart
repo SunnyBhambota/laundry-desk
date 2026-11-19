@@ -183,7 +183,11 @@ class CloudSync {
   /// Reads everything once. Returns false when the shop has no cloud data yet.
   Future<bool> pull() async {
     final settings = await _shop.collection('meta').doc('settings').get();
-    if (!settings.exists && admin) return false;
+    if (!settings.exists && admin) {
+      // settings may be missing while records exist (older versions): still load them
+      final any = await _shop.collection('branches').limit(1).get();
+      if (any.docs.isEmpty) return false;
+    }
     _applying = true;
     try {
       for (final col in [...allCols, 'meta']) {
@@ -320,25 +324,55 @@ class CloudSync {
     }
     if (writes.isEmpty && keys == null) return;
 
-    final entries = writes.entries.toList();
+    // Settings + counter first (small, and other phones need them to open the shop).
+    final entries = writes.entries.toList()..sort((a, b) => (a.key.startsWith('meta/') ? 0 : 1).compareTo(b.key.startsWith('meta/') ? 0 : 1));
+    final failed = <String>[];
     for (var i = 0; i < entries.length; i += 400) {
-      final b = _fs.batch();
-      for (final e in entries.skip(i).take(400)) {
-        final parts = e.key.split('/');
-        final ref = _shop.collection(parts[0]).doc(parts[1]);
-        e.value == null ? b.delete(ref) : b.set(ref, e.value!);
-      }
-      if (i == 0 && keys != null) {
-        b.set(_fs.collection('staffKeys').doc(d.shopCode), {'ownerUid': d.ownerUid, 'keys': keys});
-      }
-      await b.commit();
-      for (final e in entries.skip(i).take(400)) {
-        e.value == null ? _synced.remove(e.key) : _synced[e.key] = enc(e.value);
+      final chunk = entries.skip(i).take(400).toList();
+      try {
+        final b = _fs.batch();
+        for (final e in chunk) {
+          final parts = e.key.split('/');
+          final ref = _shop.collection(parts[0]).doc(parts[1]);
+          e.value == null ? b.delete(ref) : b.set(ref, e.value!);
+        }
+        if (i == 0 && keys != null) {
+          b.set(_fs.collection('staffKeys').doc(d.shopCode), {'ownerUid': d.ownerUid, 'keys': keys});
+        }
+        await b.commit();
+        for (final e in chunk) {
+          e.value == null ? _synced.remove(e.key) : _synced[e.key] = enc(e.value);
+        }
+      } catch (_) {
+        // One bad record must not block the rest: write them one by one.
+        for (final e in chunk) {
+          try {
+            final parts = e.key.split('/');
+            final ref = _shop.collection(parts[0]).doc(parts[1]);
+            if (e.value == null) {
+              await ref.delete();
+            } else {
+              await ref.set(e.value!);
+            }
+            e.value == null ? _synced.remove(e.key) : _synced[e.key] = enc(e.value);
+          } catch (err) {
+            failed.add('${e.key}: ${err is FirebaseException ? err.code : err}');
+          }
+        }
+        if (i == 0 && keys != null) {
+          try {
+            await _fs.collection('staffKeys').doc(d.shopCode).set({'ownerUid': d.ownerUid, 'keys': keys});
+          } catch (err) {
+            failed.add('staffKeys: ${err is FirebaseException ? err.code : err}');
+            keys = null;
+          }
+        }
       }
     }
     if (entries.isEmpty && keys != null) {
       await _fs.collection('staffKeys').doc(d.shopCode).set({'ownerUid': d.ownerUid, 'keys': keys});
     }
     if (keys != null) _syncedKeys = enc(keys);
+    if (failed.isNotEmpty) throw StateError('${failed.length} not saved – ${failed.take(3).join('; ')}');
   }
 }

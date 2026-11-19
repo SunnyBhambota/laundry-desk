@@ -129,7 +129,11 @@ void main() {
       cloudOrders = (await shopRef.collection('orders').get(const GetOptions(source: Source.server))).size;
       if (cloudOrders == orders) break;
     }
-    log('cloud orders $cloudOrders / $orders');
+    log('cloud orders $cloudOrders / $orders · sync error: "${d0.sync?.lastError}"');
+    for (final col in ['branches', 'customers', 'staff', 'activity', 'attendance', 'expenses', 'issues', 'payouts', 'pings', 'meta', 'garments', 'coupons', 'stock']) {
+      final n = (await shopRef.collection(col).get(const GetOptions(source: Source.server))).size;
+      log('cloud $col: $n');
+    }
     expect(cloudOrders, orders, reason: 'all orders reached the cloud');
     expect((await shopRef.collection('meta').doc('settings').get(const GetOptions(source: Source.server))).exists, isTrue);
 
