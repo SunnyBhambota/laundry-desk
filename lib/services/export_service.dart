@@ -52,6 +52,7 @@ class ExportService {
           pw.Text(shop.shopName, textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _navy)),
           if ((b?.address ?? shop.address).isNotEmpty)
             pw.Text(b?.address.isNotEmpty == true ? b!.address : shop.address, textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: _slate)),
+          if ((b?.phone ?? '').isNotEmpty) pw.Text('Ph: ${b!.phone}', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: _slate)),
           pw.SizedBox(height: 6),
           pw.Divider(thickness: .6),
           row('Bill', o.code, bold: true),
@@ -197,9 +198,32 @@ class ExportService {
           for (final e in r.top(r.customerSpend, 10)) [data.customer(e.key)?.name ?? '-', _m(e.value, cur)],
         ]),
         if (data.branches.length > 1 && branchId == null)
-          table('Branches', [
-            ['Branch', 'Sales'],
-            for (final b in data.branches) [b.name, _m(r.branchSales[b.id] ?? 0, cur)],
+          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+            pw.SizedBox(height: 10),
+            pw.Text('Branch comparison', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _navy)),
+            pw.SizedBox(height: 4),
+            pw.TableHelper.fromTextArray(
+              data: [
+                ['Branch', 'Orders', 'Sales', 'Collected', 'Expenses', 'Profit', 'Dues', 'Complaints'],
+                for (final b in data.branches)
+                  () {
+                    final br = Report(orders: data.orders, expenses: data.expenses, range: r.range, branchId: b.id);
+                    return [
+                      b.name,
+                      '${br.orderCount}',
+                      _m(br.sales, cur),
+                      _m(br.collected, cur),
+                      _m(br.expense, cur),
+                      _m(br.profit, cur),
+                      _m(br.pendingDues, cur),
+                      '${data.issues.where((i) => i.branchId == b.id && r.range.has(i.openedAt)).length}',
+                    ];
+                  }(),
+              ],
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE6EEFC)),
+            ),
           ]),
         table('Expenses', [
           ['Type', 'Amount'],
@@ -208,7 +232,7 @@ class ExportService {
         if (data.staff.isNotEmpty)
           table('Staff', [
             ['Name', 'Booked / Updates / Deliveries / Collected / Days'],
-            for (final s in data.staff.where((s) => s.active))
+            for (final s in data.staff.where((s) => s.active && (branchId == null || s.branchId == branchId)))
               [
                 '${s.name} (${s.role.name})',
                 '${stats[s.id]?.ordersBooked ?? 0} / ${stats[s.id]?.statusUpdates ?? 0} / ${(stats[s.id]?.deliveries ?? 0) + (stats[s.id]?.pickups ?? 0)} / ${_m(stats[s.id]?.cashCollected ?? 0, cur)} / ${stats[s.id]?.daysPresent ?? 0}',
@@ -344,6 +368,28 @@ class ExportService {
     return doc.save();
   }
 
+  static String branchCsv(ShopData d, DateRange range) => _csv([
+        ['Branch', 'Address', 'Orders', 'Pieces', 'Sales', 'Collected', 'Expenses', 'Profit', 'Pending dues', 'Complaints', 'Wrong deliveries', 'Active staff'],
+        for (final b in d.branches)
+          () {
+            final r = Report(orders: d.orders, expenses: d.expenses, range: range, branchId: b.id);
+            return [
+              b.name,
+              b.address,
+              r.orderCount,
+              r.pieces,
+              r.sales.toStringAsFixed(2),
+              r.collected.toStringAsFixed(2),
+              r.expense.toStringAsFixed(2),
+              r.profit.toStringAsFixed(2),
+              r.pendingDues.toStringAsFixed(2),
+              d.issues.where((i) => i.branchId == b.id && i.kind == 'complaint' && range.has(i.openedAt)).length,
+              d.issues.where((i) => i.branchId == b.id && i.kind != 'complaint' && range.has(i.openedAt)).length,
+              d.staff.where((s) => s.active && s.branchId == b.id).length,
+            ];
+          }(),
+      ]);
+
   static String customersCsv(ShopData d) => _csv([
         ['Name', 'Phone', 'Type', 'Address', 'Orders', 'Spent', 'Due'],
         for (final c in d.customers)
@@ -359,6 +405,40 @@ class ExportService {
       ]);
 
   // ---------------- actions ----------------
+
+  /// WhatsApp booking link for customers (free – opens a chat with the shop).
+  static String bookingLink(String shopName, String phone) {
+    var p = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (p.length == 10) p = '91$p';
+    final msg = 'Namaste $shopName, please pick up my clothes.\nName: \nAddress: \nBest time: ';
+    return 'https://wa.me/$p?text=${Uri.encodeComponent(msg)}';
+  }
+
+  /// A4 poster with the booking QR, to stick at the counter / share.
+  static Future<Uint8List> bookingPosterPdf({required ShopProfile shop, required String link, String branchName = '', String phone = ''}) async {
+    final doc = pw.Document(title: 'Book pickup - ${shop.shopName}');
+    doc.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(40),
+      build: (_) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+        pw.SizedBox(height: 20),
+        pw.Text(shop.shopName, style: pw.TextStyle(fontSize: 34, fontWeight: pw.FontWeight.bold, color: _navy), textAlign: pw.TextAlign.center),
+        if (branchName.isNotEmpty) pw.Text(branchName, style: const pw.TextStyle(fontSize: 16, color: _slate)),
+        pw.SizedBox(height: 24),
+        pw.Text('Book a FREE pickup on WhatsApp', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.Text('Scan the code with your phone camera', style: const pw.TextStyle(fontSize: 14, color: _slate)),
+        pw.SizedBox(height: 24),
+        pw.BarcodeWidget(barcode: pw.Barcode.qrCode(), data: link, width: 300, height: 300),
+        pw.SizedBox(height: 24),
+        if (phone.isNotEmpty) pw.Text('Or call / WhatsApp: +${phone.length == 10 ? '91$phone' : phone}', style: const pw.TextStyle(fontSize: 16)),
+        pw.Spacer(),
+        pw.Text('Wash & fold  -  Dry clean  -  Steam iron  -  Home pickup & delivery', style: const pw.TextStyle(fontSize: 12, color: _slate)),
+        pw.SizedBox(height: 6),
+        pw.Text('Laundry Desk by BrotriX Technologies', style: const pw.TextStyle(fontSize: 9, color: _slate)),
+      ]),
+    ));
+    return doc.save();
+  }
 
   static Future<void> printPdf(Uint8List bytes, String name) => Printing.layoutPdf(onLayout: (_) async => bytes, name: name);
 

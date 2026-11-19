@@ -8,6 +8,7 @@ import '../services/export_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 
@@ -96,6 +97,7 @@ class _IssuesScreenState extends State<IssuesScreen> {
       appBar: AppBar(
         title: Text(L(app, 'Complaints & issues', 'शिकायतें और इश्यू')),
         actions: [
+          const BranchSwitch(),
           if (app.canManage)
             IconButton(
               tooltip: L(app, 'Issue reports', 'इश्यू रिपोर्ट'),
@@ -223,7 +225,7 @@ class _ComplaintScreenState extends State<ComplaintScreen> {
         labels.add('${l.garment} · ${l.service}|${o.code} · $n/${o.pieces}');
       }
     }
-    final agents = d.staff.where((s) => s.active && s.role == Role.delivery).toList();
+    final agents = d.agentsFor(o.branchId);
 
     return Scaffold(
       appBar: AppBar(title: Text(L(app, 'Complaint · Re-wash', 'शिकायत · दोबारा धुलाई'))),
@@ -377,7 +379,7 @@ class _WrongDeliveryScreenState extends State<WrongDeliveryScreen> {
     final d = app.data!;
     final o = d.order(widget.orderId)!;
     final sus = d.suspects(o);
-    final agents = d.staff.where((s) => s.active && s.role == Role.delivery).toList();
+    final agents = d.agentsFor(o.branchId);
     if (!_init) {
       _init = true;
       _agent = o.deliveryAgent;
@@ -693,6 +695,7 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
       appBar: AppBar(
         title: Text(L(app, 'Issue reports', 'इश्यू रिपोर्ट')),
         actions: [
+          const BranchSwitch(),
           IconButton(
             tooltip: 'Excel (CSV)',
             icon: const Icon(Icons.table_view_outlined),

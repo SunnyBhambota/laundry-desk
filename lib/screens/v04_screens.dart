@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../data/ops_models.dart';
+import '../services/export_service.dart';
 import '../services/tracking_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 
@@ -322,12 +326,15 @@ class StockScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final d = app.data!;
-    final low = d.lowStock;
+    final items = d.stock.where((x) => app.scopeBranch == null || x.branchId.isEmpty || x.branchId == app.scopeBranch).toList();
+    final low = items.where((x) => x.low).toList();
+    final multi = d.branches.length > 1;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
           title: Text(L(app, 'Stock', 'स्टॉक')),
+          actions: const [BranchSwitch()],
           bottom: TabBar(tabs: [Tab(text: L(app, 'Items', 'सामान')), Tab(text: L(app, 'Suppliers', 'सप्लायर'))]),
         ),
         floatingActionButton: app.isOwner
@@ -349,8 +356,8 @@ class StockScreen extends StatelessWidget {
                 child: Text('${L(app, 'Running low', 'खत्म होने वाले')}: ${low.map((s) => s.name).join(', ')}',
                     style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w700)),
               ),
-            if (d.stock.isEmpty) EmptyState(icon: Icons.inventory_2_outlined, text: L(app, 'Add detergent, solvent, hangers, covers…', 'डिटर्जेंट, सॉल्वेंट, हैंगर, कवर… जोड़ें')),
-            for (final it in d.stock)
+            if (items.isEmpty) EmptyState(icon: Icons.inventory_2_outlined, text: L(app, 'Add detergent, solvent, hangers, covers…', 'डिटर्जेंट, सॉल्वेंट, हैंगर, कवर… जोड़ें')),
+            for (final it in items)
               Card(
                 elevation: 0,
                 color: Colors.white,
@@ -370,7 +377,8 @@ class StockScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text('${L(app, 'Min', 'कम से कम')} ${it.minQty.toStringAsFixed(0)} ${it.unit}'),
+                      Text('${L(app, 'Min', 'कम से कम')} ${it.minQty.toStringAsFixed(0)} ${it.unit}'
+                          '${multi && it.branchId.isNotEmpty ? ' · ${d.branch(it.branchId)?.name ?? ''}' : ''}'),
                     ]),
                   ),
                   trailing: Text('${it.qty.toStringAsFixed(it.qty == it.qty.roundToDouble() ? 0 : 1)} ${it.unit}',
@@ -568,7 +576,7 @@ class RouteMapScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(L(app, 'Route & map', 'रूट और मैप'))),
+      appBar: AppBar(title: Text(L(app, 'Route & map', 'रूट और मैप')), actions: [if (agentId == null) const BranchSwitch()]),
       body: Column(children: [
         SizedBox(
           height: 330,
@@ -642,6 +650,67 @@ class RouteMapScreen extends StatelessWidget {
               ),
           ]),
         ),
+      ]),
+    );
+  }
+}
+
+
+// ---------------- customer booking QR (WhatsApp, free) ----------------
+
+class BookingQrScreen extends StatefulWidget {
+  const BookingQrScreen({super.key});
+  @override
+  State<BookingQrScreen> createState() => _BookingQrScreenState();
+}
+
+class _BookingQrScreenState extends State<BookingQrScreen> {
+  String? _branch;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final d = app.data!;
+    final shop = app.shop!;
+    final b = d.branch(_branch ?? app.scopeBranch ?? d.branches.first.id) ?? d.branches.first;
+    final ownerPhone = app.owner?.mobile ?? '';
+    final phone = b.phone.isNotEmpty ? b.phone : ownerPhone;
+    final link = ExportService.bookingLink(shop.shopName, phone);
+    return Scaffold(
+      appBar: AppBar(title: Text(L(app, 'Customer booking QR', 'ग्राहक बुकिंग QR'))),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
+        Text(
+            L(app, 'Customers scan this and a WhatsApp chat opens with a pickup request to your number. Free – no app needed.',
+                'ग्राहक यह स्कैन करेंगे तो आपके नंबर पर पिकअप का WhatsApp मैसेज खुलेगा। फ्री – कोई ऐप नहीं चाहिए।'),
+            style: const TextStyle(color: LD.slate)),
+        if (d.branches.length > 1) ...[
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final x in d.branches) Pill(label: x.name, on: x.id == b.id, onTap: () => setState(() => _branch = x.id)),
+          ]),
+        ],
+        const SizedBox(height: 16),
+        if (phone.replaceAll(RegExp(r'[^0-9]'), '').length < 10)
+          Text(L(app, 'Add a phone number for this branch (More → Branches) first.', 'पहले इस ब्रांच का फ़ोन नंबर डालें (More → Branches)।'),
+              style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w700))
+        else ...[
+          Center(child: QrImageView(data: link, size: 240, backgroundColor: Colors.white)),
+          const SizedBox(height: 8),
+          Center(child: Text('+${phone.length == 10 ? '91$phone' : phone}', style: heading(16, weight: FontWeight.w700))),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () async => ExportService.printPdf(
+                await ExportService.bookingPosterPdf(shop: shop, link: link, branchName: d.branches.length > 1 ? b.name : '', phone: phone), 'Booking poster'),
+            icon: const Icon(Icons.print_outlined),
+            label: Text(L(app, 'Print A4 poster', 'A4 पोस्टर प्रिंट करें')),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => Share.share('${shop.shopName}: ${L(app, 'book a pickup on WhatsApp', 'WhatsApp पर पिकअप बुक करें')} $link'),
+            icon: const Icon(Icons.share_outlined),
+            label: Text(L(app, 'Share booking link', 'बुकिंग लिंक भेजें')),
+          ),
+        ],
       ]),
     );
   }

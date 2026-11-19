@@ -72,6 +72,23 @@ class _MoreScreenState extends State<MoreScreen> {
               title: Text(t('mode'), style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text(AuthService.instance.cloud ? t('modeCloud') : t('modeDemo')),
             ),
+          if (d.sync != null)
+            ListTile(
+              leading: Icon(d.sync!.lastError.isEmpty ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                  color: d.sync!.lastError.isEmpty ? LD.success : const Color(0xFFB42318)),
+              title: Text(
+                  d.sync!.lastError.isEmpty
+                      ? '${L(app, 'Cloud synced', 'क्लाउड सिंक')} ${d.sync!.lastOk == null ? '' : hm(d.sync!.lastOk!)}'
+                      : L(app, 'Cloud sync problem – tap to retry', 'क्लाउड सिंक में दिक्कत – दोबारा कोशिश करें'),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: d.sync!.lastError.isEmpty ? null : Text(d.sync!.lastError, maxLines: 2, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.sync_rounded),
+              onTap: () async {
+                await d.flush();
+                if (context.mounted) toast(context, d.sync!.lastError.isEmpty ? L(app, 'All saved to cloud.', 'सब क्लाउड में सेव है।') : d.sync!.lastError);
+                setState(() {});
+              },
+            ),
         ]),
         if (app.role != Role.washer && app.role != Role.delivery)
           group([
@@ -84,9 +101,12 @@ class _MoreScreenState extends State<MoreScreen> {
                   sub: d.lowStock.isEmpty ? null : '${d.lowStock.length} ${L(app, 'running low', 'खत्म होने वाले')}'),
             tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen())),
             tile(Icons.print_outlined, L(app, 'Printer & UPI', 'प्रिंटर और UPI'), () => go(const PrinterScreen())),
+            tile(Icons.qr_code_2_rounded, L(app, 'Customer booking QR', 'ग्राहक बुकिंग QR'), () => go(const BookingQrScreen()),
+                sub: L(app, 'WhatsApp pickup requests · poster', 'WhatsApp पिकअप रिक्वेस्ट · पोस्टर')),
             tile(Icons.report_problem_outlined, L(app, 'Complaints & issues', 'शिकायतें और इश्यू'), () => go(const IssuesScreen())),
             tile(Icons.list_alt_rounded, t('rateCard'), () => go(const RateCardScreen())),
             if (app.canManage) tile(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
+            if (app.canManage) tile(Icons.point_of_sale_outlined, L(app, 'Day closing (cash book)', 'दिन का हिसाब (कैश बुक)'), () => go(const DayCloseScreen())),
             if (app.canManage) tile(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
             if (app.isOwner) tile(Icons.store_mall_directory_outlined, t('branches'), () => go(const BranchesScreen())),
             if (app.isOwner) tile(Icons.tune_rounded, L(app, 'Commission rules', 'कमीशन के नियम'), () => go(const RulesScreen())),

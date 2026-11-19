@@ -5,10 +5,13 @@ import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../data/ops_models.dart';
 import '../data/reports.dart';
+import '../services/auth_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
+import 'reports_screen.dart';
 import 'v03_screens.dart';
 
 // ---------------- Expenses ----------------
@@ -33,7 +36,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ..sort((a, b) => b.at.compareTo(a.at));
     final total = list.fold<double>(0, (s, e) => s + e.amount);
     return Scaffold(
-      appBar: AppBar(title: Text(t('expenses'))),
+      appBar: AppBar(title: Text(t('expenses')), actions: const [BranchSwitch()]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _add(context, app),
         icon: const Icon(Icons.add_rounded),
@@ -140,7 +143,10 @@ class BranchesScreen extends StatelessWidget {
       ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         for (final b in d.branches) ...[
-          SectionCard(
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _branchSheet(context, app, b),
+            child: SectionCard(
             child: Row(children: [
               const Icon(Icons.store_mall_directory_outlined, color: LD.primary),
               const SizedBox(width: 12),
@@ -156,13 +162,80 @@ class BranchesScreen extends StatelessWidget {
                   ),
                 ]),
               ),
-              Text(money(r.branchSales[b.id] ?? 0, cur), style: const TextStyle(fontWeight: FontWeight.w700)),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(money(r.branchSales[b.id] ?? 0, cur), style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(app.t('today'), style: const TextStyle(fontSize: 11, color: LD.slate)),
+              ]),
+              const Icon(Icons.chevron_right_rounded, color: LD.slate),
             ]),
+          ),
           ),
           const SizedBox(height: 10),
         ],
+        if (d.branches.length > 1) BranchCompareCard(range: DateRange.of(Period.month)),
       ]),
     );
+  }
+
+  void _branchSheet(BuildContext context, AppState app, Branch b) {
+    final d = app.data!;
+    final cur = app.shop!.currency;
+    final m = Report(orders: d.orders, expenses: d.expenses, range: DateRange.of(Period.month), branchId: b.id);
+    final name = TextEditingController(text: b.name);
+    final addr = TextEditingController(text: b.address);
+    final phone = TextEditingController(text: b.phone);
+    final team = d.staff.where((s) => s.active && s.branchId == b.id).toList();
+    final hasOrders = d.orders.any((o) => o.branchId == b.id);
+    sheet(context, b.name, (c) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('${L(app, 'This month', 'इस महीने')}: ${m.orderCount} ${app.t('orders').toLowerCase()} · ${money(m.sales, cur)} · '
+              '${app.t('collected')} ${money(m.collected, cur)} · ${app.t('profit')} ${money(m.profit, cur)}',
+              style: const TextStyle(color: LD.slate)),
+          const SizedBox(height: 6),
+          Text('${app.t('staff')}: ${team.isEmpty ? '—' : team.map((s) => s.name.split(' ').first).join(', ')}', style: const TextStyle(color: LD.slate)),
+          const SizedBox(height: 10),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              app.setBranchFilter(b.id);
+              Navigator.pop(c);
+              Navigator.pop(context);
+              toast(context, '${L(app, 'Now showing', 'अब दिख रहा है')}: ${b.name}');
+            },
+            icon: const Icon(Icons.visibility_outlined),
+            label: Text(L(app, 'Show only this branch in the app', 'ऐप में सिर्फ़ यही ब्रांच दिखाएँ')),
+          ),
+          const SizedBox(height: 14),
+          TextField(controller: name, decoration: fieldDeco(app.t('branchName'), icon: Icons.store_mall_directory_outlined)),
+          const SizedBox(height: 10),
+          TextField(controller: addr, decoration: fieldDeco(app.t('branchAddr'), icon: Icons.place_outlined)),
+          const SizedBox(height: 10),
+          TextField(controller: phone, keyboardType: TextInputType.phone, decoration: fieldDeco(L(app, 'Branch phone (printed on bills)', 'ब्रांच फ़ोन (बिल पर छपेगा)'), icon: Icons.phone_outlined)),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () {
+              if (name.text.trim().length < 2) return;
+              b
+                ..name = name.text.trim()
+                ..address = addr.text.trim()
+                ..phone = phone.text.trim();
+              d.changed();
+              Navigator.pop(c);
+            },
+            child: Text(app.t('save')),
+          ),
+          if (!hasOrders && team.isEmpty && d.branches.length > 1)
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+              onPressed: () async {
+                if (await confirm(context, L(app, 'Delete branch?', 'ब्रांच हटाएँ?'), b.name, danger: true)) {
+                  d.branches.remove(b);
+                  if (app.branchFilter == b.id) app.setBranchFilter(null);
+                  d.changed();
+                  if (c.mounted) Navigator.pop(c);
+                }
+              },
+              child: Text(L(app, 'Delete branch (no orders / staff)', 'ब्रांच हटाएँ (कोई ऑर्डर/स्टाफ नहीं)')),
+            ),
+        ]));
   }
 
   void _add(BuildContext context, AppState app) {
@@ -612,6 +685,35 @@ class SettingsScreen extends StatelessWidget {
               trailing: Text(app.lockOn ? 'ON' : 'OFF', style: const TextStyle(fontWeight: FontWeight.w800)),
               onTap: () => _lockSheet(context, app),
             ),
+            if (app.isOwner) ...[
+              const Divider(height: 1),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.password_rounded, color: LD.primary),
+                title: Text(AuthService.instance.hasPassword ? L(app, 'Change password', 'पासवर्ड बदलें') : L(app, 'Set a password (mobile login)', 'पासवर्ड बनाएँ (मोबाइल लॉगिन)')),
+                onTap: () => _passwordSheet(context, app),
+              ),
+              if (AuthService.instance.cloud)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.link_rounded, color: LD.primary),
+                  title: Text(AuthService.instance.linkedGoogle.isEmpty ? L(app, 'Link Google account', 'Google अकाउंट जोड़ें') : L(app, 'Google linked', 'Google जुड़ा है')),
+                  subtitle: Text(AuthService.instance.linkedGoogle.isEmpty
+                      ? L(app, 'Lets you get back in if you forget the password.', 'पासवर्ड भूलने पर इससे वापस लॉगिन कर सकते हैं।')
+                      : AuthService.instance.linkedGoogle),
+                  onTap: AuthService.instance.linkedGoogle.isNotEmpty
+                      ? null
+                      : () async {
+                          try {
+                            final ok = await AuthService.instance.linkGoogle();
+                            if (ok && context.mounted) toast(context, L(app, 'Google linked.', 'Google जुड़ गया।'));
+                          } on AuthError catch (e) {
+                            if (context.mounted) toast(context, app.t('err.${e.code}'));
+                          }
+                          app.refresh();
+                        },
+                ),
+            ],
           ]),
         ),
         const SizedBox(height: 12),
@@ -632,6 +734,45 @@ class SettingsScreen extends StatelessWidget {
       ]),
     );
   }
+}
+
+void _passwordSheet(BuildContext context, AppState app) {
+  final cur = TextEditingController();
+  final n1 = TextEditingController();
+  final n2 = TextEditingController();
+  final mob = TextEditingController(text: app.owner?.mobile.length == 12 ? app.owner!.mobile.substring(2) : '');
+  final has = AuthService.instance.hasPassword;
+  sheet(context, has ? L(app, 'Change password', 'पासवर्ड बदलें') : L(app, 'Set a password', 'पासवर्ड बनाएँ'), (sc) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (has) TextField(controller: cur, obscureText: true, decoration: fieldDeco(L(app, 'Current password', 'अभी का पासवर्ड')))
+        else TextField(controller: mob, keyboardType: TextInputType.phone, decoration: fieldDeco(app.t('mobile'), prefix: '+91 ')),
+        const SizedBox(height: 10),
+        TextField(controller: n1, obscureText: true, decoration: fieldDeco(L(app, 'New password (8+ letters)', 'नया पासवर्ड (8+ अक्षर)'))),
+        const SizedBox(height: 10),
+        TextField(controller: n2, obscureText: true, decoration: fieldDeco(L(app, 'New password again', 'नया पासवर्ड दोबारा'))),
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: () async {
+            if (n1.text.length < 8 || n1.text != n2.text) {
+              toast(sc, L(app, 'Passwords must match and be 8+ letters.', 'दोनों पासवर्ड एक जैसे और 8+ अक्षर हों।'));
+              return;
+            }
+            try {
+              if (has) {
+                await AuthService.instance.changePassword(cur.text, n1.text);
+              } else {
+                final full = AuthService.fullMobile(mob.text);
+                await AuthService.instance.addPassword(full, n1.text);
+                if (app.owner!.mobile.isEmpty) await AuthService.instance.saveOwnerMobile(app.owner!, full);
+              }
+              if (sc.mounted) Navigator.pop(sc);
+              if (context.mounted) toast(context, L(app, 'Password saved.', 'पासवर्ड सेव हो गया।'));
+            } on AuthError catch (e) {
+              if (sc.mounted) toast(sc, app.t('err.${e.code}'));
+            }
+          },
+          child: Text(app.t('save')),
+        ),
+      ]));
 }
 
 void _lockSheet(BuildContext context, AppState app) {

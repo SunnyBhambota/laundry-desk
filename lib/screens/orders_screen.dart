@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/ops_models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 
@@ -53,7 +54,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('orders'))),
+      appBar: AppBar(title: Text(t('orders')), actions: const [BranchSwitch()]),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),

@@ -128,6 +128,7 @@ class ThermalPrinter {
       ..bold(false);
     final br = d.branch(o.branchId);
     if ((br?.address ?? shop.address).isNotEmpty) e.text(br?.address.isNotEmpty == true ? br!.address : shop.address);
+    if ((br?.phone ?? '').isNotEmpty) e.text('Ph: ${br!.phone}');
     e
       ..align(0)
       ..line()

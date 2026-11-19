@@ -353,7 +353,7 @@ class OrderDetailScreen extends StatelessWidget {
     final app = context.read<AppState>();
     final d = app.data!;
     final t = app.t;
-    final agents = d.staff.where((s) => s.active && s.role == Role.delivery).toList();
+    final agents = d.agentsFor(o.branchId);
     sheet(context, t('assignAgent'), (c) => Column(children: [
           if (agents.isEmpty) Text(t('noStaff'), style: const TextStyle(color: LD.slate)),
           for (final s in agents)

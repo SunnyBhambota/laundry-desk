@@ -38,6 +38,10 @@ class CloudSync {
   bool _again = false;
   bool _applying = false;
 
+  /// Shown in More → Cloud: last good sync and last problem.
+  DateTime? lastOk;
+  String lastError = '';
+
   // ---------------- canonical json ----------------
 
   static Object? _canon(Object? v) {
@@ -193,6 +197,7 @@ class CloudSync {
     } finally {
       _applying = false;
     }
+    lastOk = DateTime.now();
     return true;
   }
 
@@ -286,8 +291,11 @@ class CloudSync {
         _again = false;
         await _pushOnce();
       } while (_again);
-    } catch (_) {
+      lastOk = DateTime.now();
+      lastError = '';
+    } catch (e) {
       // offline or denied: Firestore keeps offline writes; retried on next change
+      lastError = e is FirebaseException ? (e.code) : e.toString();
     } finally {
       _pushing = false;
     }

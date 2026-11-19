@@ -8,6 +8,7 @@ import 'issue_screens.dart';
 import 'payroll_screens.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 import 'v04_screens.dart';
@@ -33,6 +34,7 @@ class DeliveryBoardScreen extends StatelessWidget {
         appBar: AppBar(
           title: Text(t('delivery')),
           actions: [
+            const BranchSwitch(),
             IconButton(
               tooltip: L(app, 'Live map', 'लाइव मैप'),
               icon: const Icon(Icons.map_outlined),

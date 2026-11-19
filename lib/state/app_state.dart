@@ -213,6 +213,8 @@ class AppState extends ChangeNotifier {
 
   String _pinHash(String pin) => sha256.convert(utf8.encode('ld-lock:$shopOwnerUid:$pin')).toString();
 
+  void refresh() => notifyListeners();
+
   void setBranchFilter(String? id) {
     branchFilter = id;
     notifyListeners();
@@ -223,10 +225,11 @@ class AppState extends ChangeNotifier {
     locked = false;
     if (staffUser != null) {
       data?.checkOut(staffUser!.id);
-      await Future<void>.delayed(const Duration(milliseconds: 600)); // let the check-out sync
       final p = await SharedPreferences.getInstance();
       await p.remove(_kStaff);
     }
+    await data?.flush(); // send last changes while still signed in
+    data?.sync?.stop();
     await AuthService.instance.signOut();
     owner = null;
     staffUser = null;

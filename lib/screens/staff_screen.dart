@@ -6,6 +6,7 @@ import '../data/reports.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'payroll_screens.dart';
 
@@ -36,6 +37,7 @@ class _StaffScreenState extends State<StaffScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(t('staff')),
+          actions: const [BranchSwitch()],
           bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: t('team')), Tab(text: t('attendance')), Tab(text: t('performance')), Tab(text: L(app, 'Payroll & ranks', 'पगार और रैंक'))]),
         ),
         floatingActionButton: app.canManage
@@ -207,6 +209,17 @@ class _StaffScreenState extends State<StaffScreen> {
               title: Text('${_kindText(a.kind, t)} ${a.text}'),
               trailing: Text(hm(a.at), style: const TextStyle(color: LD.slate)),
             ),
+          if (app.isOwner) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(c);
+                _editStaff(context, app, s);
+              },
+              icon: const Icon(Icons.edit_outlined),
+              label: Text(L(app, 'Edit: branch, role, salary, PIN', 'बदलें: ब्रांच, रोल, सैलरी, PIN')),
+            ),
+          ],
           if (app.canManage) ...[
             const SizedBox(height: 8),
             TextButton(
@@ -222,6 +235,68 @@ class _StaffScreenState extends State<StaffScreen> {
             ),
           ],
         ]));
+  }
+
+  void _editStaff(BuildContext context, AppState app, Staff s) {
+    final d = app.data!;
+    final t = app.t;
+    final name = TextEditingController(text: s.name);
+    final salary = TextEditingController(text: s.salary == 0 ? '' : s.salary.toStringAsFixed(0));
+    final pin = TextEditingController();
+    var role = s.role;
+    var branch = d.branch(s.branchId) == null ? d.branches.first.id : s.branchId;
+    sheet(context, s.name, (c) => StatefulBuilder(builder: (c, set) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextField(controller: name, decoration: fieldDeco(t('name'), icon: Icons.person_outline)),
+            const SizedBox(height: 10),
+            Text(t('role'), style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final r in [Role.manager, Role.counter, Role.washer, Role.delivery])
+                Pill(label: roleLabel(r, t), on: role == r, onTap: () => set(() => role = r)),
+            ]),
+            if (d.branches.length > 1) ...[
+              const SizedBox(height: 10),
+              Text(L(app, 'Works at branch', 'किस ब्रांच में'), style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final b in d.branches) Pill(label: b.name, on: branch == b.id, onTap: () => set(() => branch = b.id)),
+              ]),
+            ],
+            const SizedBox(height: 10),
+            TextField(controller: salary, keyboardType: TextInputType.number, decoration: fieldDeco(L(app, 'Monthly salary', 'मासिक सैलरी'), icon: Icons.currency_rupee)),
+            const SizedBox(height: 10),
+            TextField(
+                controller: pin,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                decoration: fieldDeco(L(app, 'New 4-digit PIN (leave empty to keep)', 'नया 4 अंक PIN (खाली = वही)'), icon: Icons.pin_outlined)),
+            const SizedBox(height: 6),
+            FilledButton(
+              onPressed: () {
+                if (pin.text.isNotEmpty && !RegExp(r'^\d{4}$').hasMatch(pin.text)) {
+                  toast(c, L(app, 'PIN must be 4 digits.', 'PIN 4 अंक का हो।'));
+                  return;
+                }
+                final moved = branch != s.branchId;
+                s
+                  ..name = name.text.trim().isEmpty ? s.name : name.text.trim()
+                  ..role = role
+                  ..branchId = branch
+                  ..salary = double.tryParse(salary.text) ?? s.salary;
+                if (moved) d.log('owner', 'staff.move', text: '${s.name} → ${d.branch(branch)?.name ?? ''}');
+                if (pin.text.isNotEmpty) {
+                  d.setStaffPin(s, pin.text);
+                } else {
+                  d.changed();
+                }
+                Navigator.pop(c);
+                toast(context, L(app, 'Saved. Staff must log in again if PIN changed.', 'सेव हो गया। PIN बदला है तो स्टाफ दोबारा लॉगिन करे।'));
+              },
+              child: Text(t('save')),
+            ),
+          ]);
+        }));
   }
 
   static String _kindText(String kind, String Function(String) t) {

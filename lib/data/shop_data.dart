@@ -96,8 +96,9 @@ class ShopData extends ChangeNotifier {
           await cs.push();
         }
         d._saveLocal();
-      } catch (_) {
+      } catch (e) {
         // offline: keep the phone copy, sync later
+        cs.lastError = 'read: $e';
       }
       cs.listen();
     }
@@ -240,6 +241,15 @@ class ShopData extends ChangeNotifier {
     await sync?.push();
   }
 
+  /// Saves anything still waiting (used before logout).
+  Future<void> flush() async {
+    _saveTimer?.cancel();
+    _saveTimer = null;
+    try {
+      await _write().timeout(const Duration(seconds: 8));
+    } catch (_) {}
+  }
+
   Future<void> _saveLocal() async {
     final p = await SharedPreferences.getInstance();
     await p.setString(_key(ownerUid), jsonEncode(toJson()));
@@ -356,6 +366,13 @@ class ShopData extends ChangeNotifier {
   Customer? customer(String id) => customers.where((c) => c.id == id).firstOrNull;
   Staff? staffBy(String id) => staff.where((s) => s.id == id).firstOrNull;
   Branch? branch(String id) => branches.where((b) => b.id == id).firstOrNull;
+
+  /// Delivery people for a branch (own branch first, then others if the branch has none).
+  List<Staff> agentsFor(String branchId) {
+    final all = staff.where((s) => s.active && s.role == Role.delivery).toList();
+    final mine = all.where((s) => s.branchId == branchId).toList();
+    return mine.isNotEmpty ? mine : all;
+  }
   LaundryOrder? order(String id) => orders.where((o) => o.id == id).firstOrNull;
   Garment? garment(String id) => garments.where((g) => g.id == id).firstOrNull;
   double? rate(String garmentId, String service) => rates['$garmentId|$service'];

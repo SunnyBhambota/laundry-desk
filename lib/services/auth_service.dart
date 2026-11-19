@@ -234,6 +234,81 @@ class AuthService {
     }
   }
 
+  /// Change the owner's password (needs the current one).
+  Future<void> changePassword(String current, String next) async {
+    if (!_cloud) {
+      final p = await SharedPreferences.getInstance();
+      final uid = p.getString(_kSession);
+      final list = _accounts(p);
+      final i = list.indexWhere((a) => a['uid'] == uid);
+      if (i < 0 || list[i]['hash'] != _hash(current, list[i]['salt'] as String)) throw AuthError('wrong');
+      final salt = _salt();
+      list[i] = {...list[i], 'salt': salt, 'hash': _hash(next, salt)};
+      await p.setString(_kAccounts, jsonEncode(list));
+      return;
+    }
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null || u.email == null) throw AuthError('generic');
+    try {
+      final hasPw = u.providerData.any((p) => p.providerId == 'password');
+      if (hasPw) {
+        await u.reauthenticateWithCredential(EmailAuthProvider.credential(email: u.email!, password: current));
+        await u.updatePassword(next);
+      } else {
+        throw AuthError('generic');
+      }
+    } on FirebaseAuthException catch (e) {
+      throw AuthError(_mapFirebase(e.code));
+    }
+  }
+
+  /// Link a Google account to a mobile+password owner: if the password is ever
+  /// forgotten, "Continue with Google" opens the same shop, then set a new password.
+  Future<bool> linkGoogle() async {
+    if (!_cloud) throw AuthError('cloudOnly');
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) throw AuthError('generic');
+    try {
+      final g = GoogleSignIn(serverClientId: AppConfig.googleWebClientId, scopes: const ['email']);
+      try {
+        await g.signOut();
+      } catch (_) {}
+      final acc = await g.signIn();
+      if (acc == null) return false;
+      final a = await acc.authentication;
+      await u.linkWithCredential(GoogleAuthProvider.credential(idToken: a.idToken, accessToken: a.accessToken));
+      return true;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'credential-already-in-use' || e.code == 'provider-already-linked') throw AuthError('googleUsed');
+      throw AuthError(_mapFirebase(e.code));
+    }
+  }
+
+  /// Google account linked to the signed-in owner (or '' if none).
+  String get linkedGoogle {
+    if (!_cloud) return '';
+    final u = FirebaseAuth.instance.currentUser;
+    final g = u?.providerData.where((p) => p.providerId == 'google.com');
+    return (g == null || g.isEmpty) ? '' : (g.first.email ?? 'Google');
+  }
+
+  /// Signed in with Google only (no password set yet).
+  bool get hasPassword {
+    if (!_cloud) return true;
+    return FirebaseAuth.instance.currentUser?.providerData.any((p) => p.providerId == 'password') ?? false;
+  }
+
+  /// Owner who came by Google sets a password so mobile login also works.
+  Future<void> addPassword(String mobileFull, String next) async {
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) throw AuthError('generic');
+    try {
+      await u.linkWithCredential(EmailAuthProvider.credential(email: phoneEmail(mobileFull), password: next));
+    } on FirebaseAuthException catch (e) {
+      throw AuthError(e.code == 'email-already-in-use' || e.code == 'credential-already-in-use' ? 'exists' : _mapFirebase(e.code));
+    }
+  }
+
   /// Saves the mobile number for owners who joined with Google.
   Future<void> saveOwnerMobile(Owner o, String mobile) async {
     if (_cloud) {
