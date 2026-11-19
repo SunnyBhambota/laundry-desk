@@ -107,6 +107,14 @@ jobs:
         run: |
           flutter build apk --debug -t integration_test/app_test.dart
           (cd android && ./gradlew --stop) || true
+      - name: Free disk for the emulator (keep only the built APK)
+        run: |
+          cp build/app/outputs/flutter-apk/app-debug.apk /tmp/app-debug.apk
+          rm -rf build/app/intermediates build/app/tmp ~/.gradle/caches android/.gradle || true
+          sudo rm -rf /usr/local/lib/android/sdk/ndk /opt/hostedtoolcache/Python /opt/hostedtoolcache/go /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby /opt/hostedtoolcache/node /opt/az /usr/share/miniconda /usr/local/.ghcup /opt/microsoft /opt/google /usr/lib/jvm/temurin-8* /usr/lib/jvm/temurin-11* || true
+          docker system prune -af > /dev/null 2>&1 || true
+          mkdir -p build/app/outputs/flutter-apk && cp /tmp/app-debug.apk build/app/outputs/flutter-apk/app-debug.apk
+          df -h /
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -119,7 +127,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          disk-size: 4000M
+          disk-size: 3000M
           ram-size: 2048M
           script: bash ci/e2e.sh
       - uses: actions/upload-artifact@v4
