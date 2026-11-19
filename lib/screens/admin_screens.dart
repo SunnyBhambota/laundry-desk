@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
+import 'v03_screens.dart';
 
 // ---------------- Expenses ----------------
 
@@ -57,7 +58,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             color: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: LD.line)),
             child: ListTile(
-              title: Text(e.category, style: const TextStyle(fontWeight: FontWeight.w600)),
+              title: Text(hiName(app, e.category), style: const TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Text('${dmy(e.at)}${d.branches.length > 1 ? ' · ${d.branch(e.branchId)?.name ?? ''}' : ''}${e.note.isEmpty ? '' : ' · ${e.note}'}'),
               trailing: Text(money(e.amount, cur), style: const TextStyle(fontWeight: FontWeight.w700)),
               onLongPress: app.canManage
@@ -84,7 +85,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     sheet(context, t('addExpense'), (c) => StatefulBuilder(builder: (c, set) {
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final x in expenseCategories) Pill(label: x, on: cat == x, onTap: () => set(() => cat = x)),
+              for (final x in expenseCategories) Pill(label: hiName(app, x), on: cat == x, onTap: () => set(() => cat = x)),
             ]),
             const SizedBox(height: 12),
             TextField(controller: amount, autofocus: true, keyboardType: TextInputType.number, decoration: fieldDeco(t('amount'), icon: Icons.currency_rupee_rounded)),
@@ -218,12 +219,19 @@ class _RateCardScreenState extends State<RateCardScreen> {
             scrollDirection: Axis.horizontal,
             itemCount: services.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) => Pill(label: services[i], on: _service == services[i], onTap: () => setState(() => _service = services[i])),
+            itemBuilder: (_, i) => Pill(label: hiName(app, services[i]), on: _service == services[i], onTap: () => setState(() => _service = services[i])),
           ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-          child: Text(t('rateHint'), style: const TextStyle(fontSize: 12, color: LD.slate)),
+          child: Row(children: [
+            Expanded(child: Text(t('rateHint'), style: const TextStyle(fontSize: 12, color: LD.slate))),
+            TextButton.icon(
+              onPressed: () => _priceLists(context, app),
+              icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+              label: Text(L(app, 'VIP / business rates', 'VIP / बिज़नेस रेट')),
+            ),
+          ]),
         ),
         Expanded(
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
@@ -234,8 +242,8 @@ class _RateCardScreenState extends State<RateCardScreen> {
                 margin: const EdgeInsets.only(bottom: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: LD.line)),
                 child: ListTile(
-                  title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${g.category} · /${g.unit}', style: const TextStyle(fontSize: 12)),
+                  title: Text(hiName(app, g.name), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${hiName(app, g.category)} · /${g.unit}', style: const TextStyle(fontSize: 12)),
                   trailing: Text(
                     d.rate(g.id, _service ?? '') == null ? '—' : money(d.rate(g.id, _service!)!, cur),
                     style: TextStyle(fontWeight: FontWeight.w700, color: d.rate(g.id, _service ?? '') == null ? LD.slate : LD.navy),
@@ -247,6 +255,33 @@ class _RateCardScreenState extends State<RateCardScreen> {
         ),
       ]),
     );
+  }
+
+  void _priceLists(BuildContext context, AppState app) {
+    final d = app.data!;
+    final vip = TextEditingController(text: (d.typeDiscount['vip'] ?? 0).toStringAsFixed(0));
+    final biz = TextEditingController(text: (d.typeDiscount['business'] ?? 0).toStringAsFixed(0));
+    sheet(context, L(app, 'Customer price lists', 'ग्राहक के हिसाब से रेट'), (c) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(L(app, 'Discount on the rate card, applied automatically when you pick a customer of that type.', 'उस टाइप का ग्राहक चुनते ही रेट कार्ड पर ये छूट अपने आप लगेगी।'),
+              style: const TextStyle(color: LD.slate)),
+          const SizedBox(height: 12),
+          TextField(controller: vip, enabled: app.canManage, keyboardType: TextInputType.number, decoration: fieldDeco('VIP %', icon: Icons.star_outline)),
+          const SizedBox(height: 10),
+          TextField(controller: biz, enabled: app.canManage, keyboardType: TextInputType.number, decoration: fieldDeco('${L(app, 'Business (hotel, gym…)', 'बिज़नेस (होटल, जिम…)')} %', icon: Icons.business_outlined)),
+          const SizedBox(height: 14),
+          if (app.canManage)
+            FilledButton(
+              onPressed: () {
+                d.typeDiscount = {
+                  'vip': (double.tryParse(vip.text) ?? 0).clamp(0, 90).toDouble(),
+                  'business': (double.tryParse(biz.text) ?? 0).clamp(0, 90).toDouble(),
+                };
+                d.changed();
+                Navigator.pop(c);
+              },
+              child: Text(app.t('save')),
+            ),
+        ]));
   }
 
   void _edit(BuildContext context, AppState app, Garment g) {
@@ -579,6 +614,8 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
         ),
+        const SizedBox(height: 12),
+        const BackupCard(),
         const SizedBox(height: 12),
         if (d.hasSample)
           SectionCard(

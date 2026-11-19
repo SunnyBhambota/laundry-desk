@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
+import '../widgets/ui.dart';
 
 /// Register step 2: one-time shop setup.
 class BusinessSetupScreen extends StatefulWidget {
@@ -146,7 +147,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
               t('servicesQ'),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final s in AppConfig.services)
-                  chip(s, _services.contains(s), () => setState(() => _services.contains(s) ? _services.remove(s) : _services.add(s))),
+                  chip(hiName(app, s), _services.contains(s), () => setState(() => _services.contains(s) ? _services.remove(s) : _services.add(s))),
               ]),
             ),
             group(t('branchesQ'), row(const ['1', '2 – 5', '6+'], _branches, (v) => _branches = v)),

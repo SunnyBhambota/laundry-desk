@@ -48,6 +48,10 @@ class ShopData extends ChangeNotifier {
   String lockHash = '';
   /// Commission / incentive rules (see logic/payroll.dart).
   Map<String, dynamic> rules = {};
+  /// Discount % by customer type (price lists), e.g. {'vip': 10, 'business': 20}.
+  Map<String, double> typeDiscount = {'vip': 10, 'business': 20};
+  /// Shop UPI ID for QR on bills (e.g. shop@okhdfc).
+  String upiId = '';
 
   static String _key(String uid) => 'ld_data_$uid';
   static const _kIndex = 'ld_shop_index';
@@ -109,6 +113,8 @@ class ShopData extends ChangeNotifier {
         'rates': rates,
         'lockHash': lockHash,
         'rules': rules,
+        'typeDiscount': typeDiscount,
+        'upiId': upiId,
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -123,6 +129,10 @@ class ShopData extends ChangeNotifier {
     rates = Map<String, dynamic>.from(j['rates'] as Map? ?? {}).map((k, v) => MapEntry(k, (v as num).toDouble()));
     lockHash = j['lockHash'] as String? ?? '';
     if (j['rules'] is Map) rules = Map<String, dynamic>.from(j['rules'] as Map);
+    if (j['typeDiscount'] is Map) {
+      typeDiscount = Map<String, dynamic>.from(j['typeDiscount'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
+    }
+    upiId = j['upiId'] as String? ?? upiId;
   }
 
   /// Staff PIN hash (same formula in Firestore rules check via staffKeys).
@@ -247,6 +257,8 @@ class ShopData extends ChangeNotifier {
         'pings': pings.map((k, v) => MapEntry(k, v.map((p) => p.toJson()).toList())),
         'lockHash': lockHash,
         'rules': rules,
+        'typeDiscount': typeDiscount,
+        'upiId': upiId,
         'issues': issues.map((e) => e.toJson()).toList(),
         'payouts': payouts.map((e) => e.toJson()).toList(),
       };
@@ -276,6 +288,10 @@ class ShopData extends ChangeNotifier {
         k, (v as List).map((e) => Ping.fromJson(Map<String, dynamic>.from(e as Map))).toList()));
     lockHash = j['lockHash'] as String? ?? '';
     if (j['rules'] is Map) rules = Map<String, dynamic>.from(j['rules'] as Map);
+    if (j['typeDiscount'] is Map) {
+      typeDiscount = Map<String, dynamic>.from(j['typeDiscount'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
+    }
+    upiId = j['upiId'] as String? ?? '';
     issues = list('issues').map(Issue.fromJson).toList();
     payouts = list('payouts').map(Payout.fromJson).toList();
   }
@@ -471,6 +487,66 @@ class ShopData extends ChangeNotifier {
     garments.add(g);
     changed();
     return g;
+  }
+
+  // ---------------- v0.3: price lists, edit, refund, delete, UPI ----------------
+
+  /// Rate for this customer (VIP / business discount applied).
+  double? rateFor(String garmentId, String service, Customer? c) {
+    final r = rate(garmentId, service);
+    if (r == null) return null;
+    final pct = c == null ? 0.0 : (typeDiscount[c.type] ?? 0);
+    return (r * (100 - pct) / 100 * 100).roundToDouble() / 100;
+  }
+
+  void editOrder(LaundryOrder o, List<OrderLine> lines, {required String by, double? discount, bool? express}) {
+    final before = o.total;
+    o.lines = lines;
+    if (discount != null) o.discount = discount;
+    if (express != null) o.express = express;
+    o.history.add(StatusEvent(status: 'edited', at: DateTime.now(), by: by, note: 'Total ${before.toStringAsFixed(0)} → ${o.total.toStringAsFixed(0)}'));
+    log(by, 'order.edit', orderId: o.id, text: o.code);
+    changed();
+  }
+
+  /// Money given back to the customer (a negative payment, so reports stay right).
+  void refund(LaundryOrder o, double amount, String mode, {required String by, String note = ''}) {
+    if (amount <= 0) return;
+    o.payments.add(Payment(amount: -amount, mode: mode, at: DateTime.now(), by: by, note: note.isEmpty ? 'refund' : 'refund: $note'));
+    o.history.add(StatusEvent(status: 'refund', at: DateTime.now(), by: by, note: amount.toStringAsFixed(0)));
+    log(by, 'refund', orderId: o.id, text: amount.toStringAsFixed(0));
+    changed();
+  }
+
+  /// Replace everything with a backup file's data (same owner).
+  void restoreFrom(Map<String, dynamic> j) {
+    _fromJson(j);
+    changed();
+  }
+
+  /// Extra paid over the total (after an edit).
+  double overpaid(LaundryOrder o) => (o.paid - o.total) > 0.5 ? o.paid - o.total : 0;
+
+  /// Only when nothing is due. Orders stay (shown as "Deleted customer").
+  bool deleteCustomer(Customer c, {required String by}) {
+    if (dueOf(c.id) > 0.5) return false;
+    customers.remove(c);
+    log(by, 'customer.delete', text: c.name);
+    changed();
+    return true;
+  }
+
+  /// upi://pay link for the amount due (null when no UPI ID is set).
+  String? upiLink(LaundryOrder o, String shopName) {
+    if (upiId.trim().isEmpty || o.due <= 0) return null;
+    final q = {
+      'pa': upiId.trim(),
+      'pn': shopName,
+      'am': o.due.toStringAsFixed(2),
+      'cu': 'INR',
+      'tn': 'Laundry ${o.code}',
+    }.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    return 'upi://pay?$q';
   }
 
   // ---------------- issues (complaint / re-wash / wrong delivery) ----------------

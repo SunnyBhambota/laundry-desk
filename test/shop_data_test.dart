@@ -10,6 +10,7 @@ import 'package:laundry_desk/data/shop_data.dart';
 import 'package:laundry_desk/logic/messages.dart';
 import 'package:laundry_desk/models/models.dart';
 import 'package:laundry_desk/services/export_service.dart';
+import 'package:laundry_desk/services/thermal_printer.dart';
 import 'package:laundry_desk/widgets/ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -205,5 +206,37 @@ void main() {
     expect(wp.dry, 4);
     expect(wp.complaints, 1);
     expect(ExportService.issuesCsv(d, d.issues).split('\n').length, 3);
+  });
+
+  test('v0.3: VIP rate, edit + refund, UPI link, delete customer, ESC/POS', () async {
+    final d = ShopData('local_v03');
+    final shop = _shop();
+    await d.initialise(shop);
+    final vip = d.addCustomer(name: 'Hotel', phone: '9876500000', type: 'business');
+    expect(d.rateFor('g_shirt', 'Dry clean', vip), 64); // 80 − 20%
+    final o = d.createOrder(
+      customerId: vip.id,
+      branchId: d.branches.first.id,
+      lines: [OrderLine(garment: 'Shirt', service: 'Dry clean', qty: 3, rate: 64)],
+      by: 'owner',
+      advance: 192,
+    );
+    expect(o.due, 0);
+    d.editOrder(o, [OrderLine(garment: 'Shirt', service: 'Dry clean', qty: 2, rate: 64)], by: 'owner');
+    expect(o.history.last.status, 'edited');
+    expect(d.overpaid(o), 64);
+    d.refund(o, 64, 'cash', by: 'owner');
+    expect(d.overpaid(o), 0);
+    expect(o.paid, 128);
+    expect(d.upiLink(o, 'Shop'), isNull); // nothing due
+    d.upiId = 'shop@okhdfc';
+    o.lines.add(OrderLine(garment: 'Shirt', service: 'Dry clean', qty: 1, rate: 64));
+    expect(d.upiLink(o, 'Sparkle Laundry'), startsWith('upi://pay?pa=shop%40okhdfc&pn=Sparkle%20Laundry&am=64.00'));
+    expect(d.deleteCustomer(vip, by: 'owner'), isFalse); // 64 still due
+    final p = ThermalPrinter.instance;
+    final bytes = p.billBytes(shop: shop, d: d, o: o);
+    expect(bytes.take(2), [0x1B, 0x40]);
+    expect(bytes.length, greaterThan(200));
+    expect(p.tagBytes(d: d, o: o).length, greaterThan(100));
   });
 }

@@ -5,6 +5,7 @@ import '../data/ops_models.dart';
 import '../logic/messages.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'new_order_screen.dart';
 import 'orders_screen.dart';
@@ -128,7 +129,26 @@ class CustomerDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(c.name),
-        actions: [IconButton(tooltip: t('edit'), onPressed: () => customerForm(context, app, edit: c), icon: const Icon(Icons.edit_outlined))],
+        actions: [
+          IconButton(tooltip: t('edit'), onPressed: () => customerForm(context, app, edit: c), icon: const Icon(Icons.edit_outlined)),
+          if (app.isOwner)
+            IconButton(
+              tooltip: L(app, 'Delete customer', 'ग्राहक हटाएँ'),
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                if (d.dueOf(c.id) > 0.5) {
+                  toast(context, L(app, 'Settle the pending amount first.', 'पहले बाकी पैसे का हिसाब करें।'));
+                  return;
+                }
+                if (await confirm(context, L(app, 'Delete customer?', 'ग्राहक हटाएँ?'),
+                    L(app, 'Old orders stay in reports as "Deleted customer".', 'पुराने ऑर्डर रिपोर्ट में "Deleted customer" नाम से रहेंगे।'),
+                    danger: true)) {
+                  d.deleteCustomer(c, by: app.actorId);
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NewOrderScreen(customerId: c.id))),

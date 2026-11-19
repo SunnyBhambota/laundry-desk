@@ -5,6 +5,8 @@ import '../data/ops_models.dart';
 import '../logic/messages.dart';
 import '../services/export_service.dart';
 import 'issue_screens.dart';
+import 'v03_screens.dart';
+import '../services/thermal_printer.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -51,7 +53,18 @@ class OrderDetailScreen extends StatelessWidget {
           ),
           PopupMenuButton<String>(
             onSelected: (v) async {
-              if (v == 'share') {
+              if (v == 'edit') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => EditOrderScreen(orderId: o.id)));
+              } else if (v == 'bt' || v == 'bttags') {
+                final p = ThermalPrinter.instance;
+                await p.load();
+                final err = await p.send(v == 'bt' ? p.billBytes(shop: app.shop!, d: d, o: o) : p.tagBytes(d: d, o: o));
+                if (context.mounted) toast(context, err ?? L(app, 'Printed', 'प्रिंट हो गया'));
+              } else if (v == 'upi') {
+                upiSheet(context, o);
+              } else if (v == 'refund') {
+                refundSheet(context, o, d.overpaid(o) > 0 ? d.overpaid(o) : 0);
+              } else if (v == 'share') {
                 ExportService.sharePdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'bill-${o.code}.pdf');
               } else if (v == 'a5') {
                 ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'Bill ${o.code}');
@@ -63,6 +76,12 @@ class OrderDetailScreen extends StatelessWidget {
               }
             },
             itemBuilder: (_) => [
+              if (o.status != 'cancelled' && (app.canManage || (app.role == Role.counter && (o.status == 'received' || o.status == 'pickup'))))
+                PopupMenuItem(value: 'edit', child: Text(L(app, 'Edit order', 'ऑर्डर बदलें'))),
+              PopupMenuItem(value: 'bt', child: Text(L(app, 'Print on Bluetooth printer', 'ब्लूटूथ प्रिंटर पर प्रिंट'))),
+              if (app.module('barcode')) PopupMenuItem(value: 'bttags', child: Text(L(app, 'Print tags on Bluetooth printer', 'ब्लूटूथ प्रिंटर पर टैग'))),
+              if (o.due > 0) PopupMenuItem(value: 'upi', child: Text(L(app, 'Show UPI QR', 'UPI QR दिखाएँ'))),
+              if (app.canManage && o.paid > 0) PopupMenuItem(value: 'refund', child: Text(L(app, 'Refund', 'रिफ़ंड'))),
               PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
               PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
               if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
@@ -135,8 +154,8 @@ class OrderDetailScreen extends StatelessWidget {
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${l.garment} ${qtyText(l.qty, l.unit)}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text('${l.service} · ${money(l.rate, cur)}/${l.unit}', style: const TextStyle(fontSize: 12, color: LD.slate)),
+                      Text('${hiName(app, l.garment)} ${qtyText(l.qty, l.unit)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text('${hiName(app, l.service)} · ${money(l.rate, cur)}/${l.unit}', style: const TextStyle(fontSize: 12, color: LD.slate)),
                       if (l.note.isNotEmpty)
                         Text('⚠ ${l.note}', style: const TextStyle(fontSize: 12, color: Color(0xFFA8430F))),
                     ]),

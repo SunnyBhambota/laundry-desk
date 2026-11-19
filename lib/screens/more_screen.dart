@@ -13,6 +13,7 @@ import 'customers_screen.dart';
 import 'delivery_screen.dart';
 import 'issue_screens.dart';
 import 'payroll_screens.dart';
+import 'v03_screens.dart';
 import '../data/issue_models.dart';
 import 'reports_screen.dart';
 
@@ -75,6 +76,8 @@ class _MoreScreenState extends State<MoreScreen> {
           group([
             tile(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
             if (app.module('delivery')) tile(Icons.delivery_dining_outlined, t('delivery'), () => go(const DeliveryBoardScreen())),
+            tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen())),
+            tile(Icons.print_outlined, L(app, 'Printer & UPI', 'प्रिंटर और UPI'), () => go(const PrinterScreen())),
             tile(Icons.report_problem_outlined, L(app, 'Complaints & issues', 'शिकायतें और इश्यू'), () => go(const IssuesScreen())),
             tile(Icons.list_alt_rounded, t('rateCard'), () => go(const RateCardScreen())),
             if (app.canManage) tile(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
@@ -88,6 +91,8 @@ class _MoreScreenState extends State<MoreScreen> {
                 sub: d.plan == 'trial' ? t('trialLeft').replaceAll('{n}', '${shop.trialDaysLeft(AppConfig.trialDays)}') : d.plan.toUpperCase()),
             tile(Icons.tune_rounded, t('settings'), () => go(const SettingsScreen()), sub: '${t('shopCode')}: ${d.shopCode}'),
           ]),
+        if (app.role == Role.washer || app.role == Role.delivery)
+          group([tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen()))]),
         if (!app.isOwner && (d.rules['showEarnings'] as bool? ?? true))
           group([
             tile(Icons.savings_outlined, L(app, 'My earnings', 'मेरी कमाई'),

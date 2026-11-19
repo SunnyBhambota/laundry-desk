@@ -17,6 +17,7 @@ import 'new_order_screen.dart';
 import 'orders_screen.dart';
 import 'reports_screen.dart';
 import 'staff_screen.dart';
+import 'v03_screens.dart';
 
 /// Owner / manager / counter home (canvas: "Owner – Admin dashboard").
 class DashboardScreen extends StatelessWidget {
@@ -107,6 +108,13 @@ class DashboardScreen extends StatelessWidget {
                   Text(app.isOwner ? 'Owner · Admin' : roleLabel(app.role, t), style: const TextStyle(fontSize: 12, color: Color(0xFFC9D6EA))),
                 ]),
               ),
+              IconButton(
+                tooltip: L(app, 'Scan tag', 'टैग स्कैन'),
+                onPressed: () => go(const ScanScreen()),
+                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12)),
+                icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+              ),
+              const SizedBox(width: 6),
               Stack(children: [
                 IconButton(
                   tooltip: t('late'),

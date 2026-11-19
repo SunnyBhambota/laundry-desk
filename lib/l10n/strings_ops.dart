@@ -224,6 +224,8 @@ const opsEn = <String, String>{
   'limit.staff': 'Free plan: up to 2 staff. Choose a plan in More → Plans.',
   'limit.branch': 'Free plan: 1 branch. Choose the Business plan for more branches.',
   'err.network': 'No internet. Please try again.',
+  'edited': 'Edited',
+  'refund': 'Refund',
 };
 
 const opsHi = <String, String>{
@@ -437,4 +439,6 @@ const opsHi = <String, String>{
   'limit.order': 'फ़्री प्लान: महीने में 150 ऑर्डर। और → प्लान से प्लान चुनें।',
   'limit.staff': 'फ़्री प्लान: 2 स्टाफ़ तक। और → प्लान से प्लान चुनें।',
   'limit.branch': 'फ़्री प्लान: 1 ब्रांच। ज़्यादा ब्रांच के लिए बिज़नेस प्लान।',
+  'edited': 'बदला गया',
+  'refund': 'रिफ़ंड',
 };

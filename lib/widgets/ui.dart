@@ -343,3 +343,22 @@ class ShareRow extends StatelessWidget {
 
 /// Inline English / Hindi text for newer screens.
 String L(AppState app, String en, String hi) => app.lang == 'hi' ? hi : en;
+
+/// Hindi names for built-in garments, services and expense types (owner's own names stay as typed).
+String hiName(AppState app, String s) {
+  if (app.lang != 'hi') return s;
+  const m = {
+    'Shirt': 'शर्ट', 'T-shirt': 'टी-शर्ट', 'Trouser / Pant': 'पैंट', 'Jeans': 'जीन्स', 'Kurta': 'कुर्ता',
+    'Suit (2 pc)': 'सूट (2 पीस)', 'Suit (3 pc)': 'सूट (3 पीस)', 'Blazer / Coat': 'ब्लेज़र / कोट', 'Sherwani': 'शेरवानी',
+    'Saree': 'साड़ी', 'Silk saree': 'सिल्क साड़ी', 'Salwar suit': 'सलवार सूट', 'Lehenga': 'लहंगा', 'Dress / Gown': 'ड्रेस / गाउन',
+    'Dupatta': 'दुपट्टा', 'Kids wear': 'बच्चों के कपड़े', 'Jacket': 'जैकेट', 'Sweater': 'स्वेटर', 'Bedsheet': 'चादर',
+    'Blanket': 'कंबल', 'Quilt / Razai': 'रज़ाई', 'Curtain (panel)': 'पर्दा', 'Towel': 'तौलिया', 'Carpet': 'कालीन',
+    'Shoes (pair)': 'जूते (जोड़ी)', 'Mixed clothes': 'मिले-जुले कपड़े',
+    'Wash & fold': 'धुलाई और तह', 'Wash & iron': 'धुलाई और प्रेस', 'Dry clean': 'ड्राई क्लीन', 'Steam iron': 'स्टीम प्रेस',
+    'Shoe cleaning': 'जूता सफ़ाई', 'Carpet & curtain': 'कालीन और पर्दा', 'Blanket / bedding': 'कंबल / बिस्तर', 'Stain removal': 'दाग हटाना',
+    'Detergent & chemicals': 'डिटर्जेंट और केमिकल', 'Electricity': 'बिजली', 'Water': 'पानी', 'Rent': 'किराया', 'Salary': 'तनख़्वाह',
+    'Maintenance': 'मरम्मत', 'Fuel & transport': 'पेट्रोल और आना-जाना', 'Packaging': 'पैकिंग', 'Other': 'अन्य',
+    'Men': 'पुरुष', 'Women': 'महिला', 'Kids': 'बच्चे', 'Household': 'घर का सामान', 'All': 'सभी',
+  };
+  return m[s] ?? s;
+}

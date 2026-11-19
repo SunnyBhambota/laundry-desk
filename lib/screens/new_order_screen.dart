@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
+import '../services/thermal_printer.dart';
 
 class NewOrderScreen extends StatefulWidget {
   const NewOrderScreen({super.key, this.customerId});
@@ -72,7 +73,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     final branches = app.isOwner ? d.branches : d.branches.where((b) => b.id == app.staffUser!.branchId).toList();
     _branchId ??= app.scopeBranch ?? (branches.isNotEmpty ? branches.first.id : null);
     final cats = ['All', ...{for (final g in d.garments) g.category}];
-    final garments = d.garments.where((g) => d.rate(g.id, _service ?? '') != null && (_cat == 'All' || g.category == _cat)).toList();
+    final garments = d.garments.where((g) => d.rateFor(g.id, _service ?? '', _customer) != null && (_cat == 'All' || g.category == _cat)).toList();
 
     final subtotal = _lines.fold<double>(0, (s, l) => s + l.amount);
     final expressAmt = _express ? subtotal * d.expressPct / 100 : 0.0;
@@ -101,7 +102,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                   leading: Avatar(initialsOf(_customer!.name), color: avatarColor(_customer!.id)),
                   title: Text(_customer!.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(
-                    '+${_customer!.phone}${d.dueOf(_customer!.id) > 0 ? ' · ${t('due')} ${money(d.dueOf(_customer!.id), cur)}' : ''}',
+                    '+${_customer!.phone}${(d.typeDiscount[_customer!.type] ?? 0) > 0 ? ' · ${t('type.${_customer!.type}')} −${d.typeDiscount[_customer!.type]!.toStringAsFixed(0)}%' : ''}${d.dueOf(_customer!.id) > 0 ? ' · ${t('due')} ${money(d.dueOf(_customer!.id), cur)}' : ''}',
                   ),
                   trailing: TextButton(onPressed: () => _pickCustomer(context), child: Text(t('edit'))),
                 ),
@@ -117,7 +118,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: services.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) => Pill(label: services[i], on: _service == services[i], onTap: () => setState(() => _service = services[i])),
+                itemBuilder: (_, i) => Pill(label: hiName(app, services[i]), on: _service == services[i], onTap: () => setState(() => _service = services[i])),
               ),
             ),
             const SizedBox(height: 10),
@@ -128,7 +129,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 itemCount: cats.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 6),
                 itemBuilder: (_, i) => ChoiceChip(
-                  label: Text(cats[i]),
+                  label: Text(hiName(app, cats[i])),
                   selected: _cat == cats[i],
                   onSelected: (_) => setState(() => _cat = cats[i]),
                 ),
@@ -150,10 +151,10 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 children: [
                   for (final g in garments)
                     _GarmentTile(
-                      name: g.name,
-                      price: '${money(d.rate(g.id, _service!)!, cur)}/${g.unit}',
+                      name: hiName(app, g.name),
+                      price: '${money(d.rateFor(g.id, _service!, _customer)!, cur)}/${g.unit}',
                       count: _lines.where((l) => l.garment == g.name && l.service == _service).fold<double>(0, (s, l) => s + l.qty),
-                      onTap: () => _add(g, d.rate(g.id, _service!)!),
+                      onTap: () => _add(g, d.rateFor(g.id, _service!, _customer)!),
                     ),
                 ],
               ),
@@ -172,8 +173,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                       child: InkWell(
                         onTap: () => _noteFor(l),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(l.garment, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          Text('${l.service} · ${money(l.rate, cur)}', style: const TextStyle(fontSize: 12, color: LD.slate)),
+                          Text(hiName(app, l.garment), style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text('${hiName(app, l.service)} · ${money(l.rate, cur)}', style: const TextStyle(fontSize: 12, color: LD.slate)),
                           Text(l.note.isEmpty ? '+ ${t('itemNote')}' : '⚠ ${l.note}',
                               style: TextStyle(fontSize: 11, color: l.note.isEmpty ? LD.primary : const Color(0xFFA8430F))),
                         ]),
@@ -330,7 +331,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     if (picked != null) {
       setState(() {
         _customer = picked;
-        if (picked.address.isNotEmpty && app.module('delivery')) _home = _home || false;
+        // VIP / business price list
+        for (final l in _lines) {
+          final g = app.data!.garments.where((g) => g.name == l.garment).firstOrNull;
+          final r = g == null ? null : app.data!.rateFor(g.id, l.service, picked);
+          if (r != null) l.rate = r;
+        }
       });
     }
   }
@@ -367,6 +373,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
       notes: _notes.text.trim(),
     );
     toast(context, t('orderCreated').replaceAll('{c}', o.code));
+    final pr = ThermalPrinter.instance;
+    pr.load().then((_) async {
+      if (pr.mac.isEmpty) return;
+      if (pr.autoBill) await pr.send(pr.billBytes(shop: app.shop!, d: d, o: o));
+      if (pr.autoTags) await pr.send(pr.tagBytes(d: d, o: o));
+    });
     _reset();
     Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: o.id)));
   }

@@ -129,7 +129,7 @@ class OrderTile extends StatelessWidget {
               StatusChip(order.status, small: true),
             ]),
             const SizedBox(height: 6),
-            Text(c?.name ?? '—', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(c?.name ?? 'Deleted customer', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 2),
             Text(
               '${order.pieces} ${t('pcs')} · ${order.lines.map((l) => l.service).toSet().join(', ')}${multi ? ' · ${d.branch(order.branchId)?.name ?? ''}' : ''}',
