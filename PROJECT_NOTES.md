@@ -42,12 +42,20 @@
 - Payroll: `logic/payroll.dart` (rules in `ShopData.rules`), `screens/payroll_screens.dart` (leaderboard, payslip, payouts, rules, my earnings, PDF slip, CSV).
 - Logo: owner ka design (assets/images/logo_mark.png), admin PIN 0000, free limits in AppConfig.
 
+## v0.3 + v0.4 (19 Nov 2026) – done
+- v0.3: `screens/v03_screens.dart` (edit order, refund, scan, printer, UPI, backup), VIP/business rates, ESC/POS.
+- v0.4: `screens/v04_screens.dart` – OffersScreen (loyalty settings, coupons, package plans), CustomerExtrasCard (points, packages, sell package, save pin), StockScreen (items, in/out, suppliers, purchase → expense), RouteMapScreen (flutter_map + OSM, nearest-first stops, Google Maps directions).
+- New order: coupon / points / package use, pickup slots. Bill PDF / thermal / WhatsApp show offers.
+- Tracking: geolocator foreground-service stream (notification) + 2-min timer, ≥90 s gap; proof at handover also pins the customer location if missing.
+- Google login: `AuthService.signInWithGoogle` (serverClientId = AppConfig.googleWebClientId); Google owners give mobile in Business setup. Needs Google provider ON in Firebase Auth.
+- Modules: `loyalty`, `stock` added (premium).
+
 ## Owner ko bataya hua pending (order mein)
 v0.3: order edit/refund/customer delete, QR scan, Bluetooth printer, UPI QR on bill, VIP/business rates, backup/restore file, Hindi gaps.
 v0.4: loyalty/coupons/packages, background tracking, pickup slots + route + map, inventory/suppliers, Google login (OTP/reset need Blaze).
 Owner decisions: WhatsApp API, Super Admin web panel (Hostinger), Play Store, customer app, iOS.
 
-## NEXT (v0.2 ideas)
+## Old ideas list (v0.2 time, mostly done now)
 - Firebase project banana (owner) → cloud login, staff doosre phone se login (abhi staff login usi phone par jahan shop data hai).
 - Phone OTP login, password reset.
 - Bill PDF + thermal printer, barcode/QR tags print, garment photo at intake.

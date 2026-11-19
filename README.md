@@ -1,4 +1,4 @@
-# Laundry Desk – Android app (v0.3, testing build)
+# Laundry Desk – Android app (v0.4, testing build)
 
 Laundry shop management by **BrotriX Technologies**. Flutter (Android first, iOS later from the same code).
 
@@ -12,6 +12,14 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
 - Har `main` push par GitHub Actions APK banata hai, emulator par khol kar check karta hai, phir **Releases** mein daalta hai.
   App khulte hi band ho jaye to release nahi banta.
 - Pehli baar Android "unknown apps" ki permission maangega: Chrome ko allow karo.
+
+## v0.4 (19 Nov 2026)
+- Offers: coupon codes (DIWALI10 type), loyalty points (delivery par milte hain, bill par use), monthly packages (Family 30 kg type) – More → Offers.
+- New order par coupon / points / package use aur pickup time-slot.
+- Stock & suppliers: detergent, hanger, cover… khareeda/use kiya; kam hone par dashboard alert; khareed automatically kharche mein.
+- Live map & route: delivery staff ki last location, stops nearest-first, Google Maps directions.
+- Background tracking: duty par phone lock ho tab bhi location (notification dikhta hai).
+- Google login (Firebase mein Google provider ON karna hai).
 
 ## v0.3 (19 Nov 2026)
 - **Order edit + refund** (timeline mein purana/naya total), **customer delete** (sirf owner, baaki paisa na ho).
