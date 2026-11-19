@@ -103,6 +103,10 @@ jobs:
       - name: Android project + settings
         run: bash ci/prepare_android.sh
       - run: flutter pub get
+      - name: Build the test app first (before the emulator, to save memory)
+        run: |
+          flutter build apk --debug -t integration_test/app_test.dart
+          (cd android && ./gradlew --stop) || true
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -116,7 +120,7 @@ jobs:
           target: google_apis
           disable-animations: true
           disk-size: 4000M
-          ram-size: 4096M
+          ram-size: 2048M
           script: bash ci/e2e.sh
       - uses: actions/upload-artifact@v4
         if: always()

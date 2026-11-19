@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Runs the end-to-end test on the running emulator; saves logs + a screenshot on failure.
+# Runs the end-to-end test (already built into app-debug.apk) on the running emulator.
 adb logcat -c || true
 set -o pipefail
-if flutter test integration_test/app_test.dart -d emulator-5554 --reporter expanded 2>&1 | tee e2e.txt; then
+if flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart \
+    --use-application-binary=build/app/outputs/flutter-apk/app-debug.apk -d emulator-5554 2>&1 | tee e2e.txt; then
   echo "E2E passed"
 else
   adb logcat -d > logcat-e2e.txt || true
