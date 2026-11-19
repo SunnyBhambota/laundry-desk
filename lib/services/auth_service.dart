@@ -55,7 +55,7 @@ class AuthService {
 
   static String phoneEmail(String mobileDigits) => '$mobileDigits@phone.laundrydesk.app';
 
-  static String fullMobile(String input, {String dial = '+91'}) => V.digits(dial) + V.digits(input);
+  static String fullMobile(String input, {String dial = '+91'}) => V.digits(dial) + V.local(input, dial: dial);
 
   // ---------- session ----------
 
@@ -120,6 +120,7 @@ class AuthService {
           ...owner.toJson(),
           'createdAt': FieldValue.serverTimestamp(),
         });
+        await _saveEmailLogin(owner);
         return owner;
       } on FirebaseAuthException catch (e) {
         throw AuthError(_mapFirebase(e.code));
@@ -144,10 +145,17 @@ class AuthService {
     final isMail = V.isEmail(loginId);
     if (_cloud) {
       try {
-        final email = isMail ? loginId.trim().toLowerCase() : phoneEmail(fullMobile(loginId, dial: dial));
+        var email = isMail ? loginId.trim().toLowerCase() : phoneEmail(fullMobile(loginId, dial: dial));
+        if (isMail && !email.endsWith('@phone.laundrydesk.app')) {
+          // Accounts are made with the mobile number; the email is only a second way in.
+          final login = await _loginForEmail(email);
+          if (login == null) throw AuthError('emailUnknown');
+          email = login;
+        }
         await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
         final o = await currentOwner();
         if (o == null) throw AuthError('generic');
+        await _saveEmailLogin(o);
         return o;
       } on FirebaseAuthException catch (e) {
         throw AuthError(_mapFirebase(e.code));
@@ -163,6 +171,30 @@ class AuthService {
       }
     }
     throw AuthError('wrong');
+  }
+
+  // ---------- email as a second login id ----------
+
+  static String _mailKey(String email) => 'mail_${sha256.convert(utf8.encode(email.trim().toLowerCase())).toString().substring(0, 40)}';
+
+  Future<void> _saveEmailLogin(Owner o) async {
+    final u = FirebaseAuth.instance.currentUser;
+    if (!_cloud || u == null || u.isAnonymous || !V.isEmail(o.email) || (u.email ?? '').isEmpty) return;
+    if (!(u.email ?? '').endsWith('@phone.laundrydesk.app')) return; // Google accounts
+    try {
+      await FirebaseFirestore.instance.collection('shopCodes').doc(_mailKey(o.email)).set({'ownerUid': u.uid, 'login': u.email});
+    } catch (_) {}
+  }
+
+  Future<String?> _loginForEmail(String email) async {
+    final auth = FirebaseAuth.instance;
+    try {
+      if (auth.currentUser == null) await auth.signInAnonymously();
+      final doc = await FirebaseFirestore.instance.collection('shopCodes').doc(_mailKey(email)).get();
+      return doc.data()?['login'] as String?;
+    } catch (_) {
+      throw AuthError('network');
+    }
   }
 
   // ---------- Google ----------

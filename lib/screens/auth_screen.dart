@@ -216,6 +216,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     Text(_login ? t('noAccount') : t('haveAccount'),
                         style: const TextStyle(fontSize: 14, color: Color(0xFF3E4F66))),
                     TextButton(
+                      key: const ValueKey('b.switch'),
                       onPressed: _switchMode,
                       child: Text(
                         _login ? t('signUp') : t('logIn'),
@@ -227,6 +228,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   if (_login)
                     Center(
                       child: TextButton.icon(
+                        key: const ValueKey('b.staff'),
                         onPressed: () => _staffLogin(context),
                         icon: const Icon(Icons.badge_outlined, size: 18, color: LD.navy),
                         label: Text(t('staffLogin'), style: const TextStyle(color: LD.navy, fontWeight: FontWeight.w600)),
@@ -269,15 +271,16 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             const SizedBox(height: 4),
             Text(t('staffLoginSub'), style: const TextStyle(color: LD.slate)),
             const SizedBox(height: 14),
-            GlassField(controller: code, hint: t('shopCode'), icon: Icons.storefront_outlined),
+            GlassField(key: const ValueKey('f.staffCode'), controller: code, hint: t('shopCode'), icon: Icons.storefront_outlined),
             const SizedBox(height: 10),
-            GlassField(controller: mobile, hint: t('mobile'), prefixText: '+91', keyboard: TextInputType.phone),
+            GlassField(key: const ValueKey('f.staffMobile'), controller: mobile, hint: t('mobile'), prefixText: '+91', keyboard: TextInputType.phone),
             const SizedBox(height: 10),
-            GlassField(controller: pin, hint: t('pin'), icon: Icons.pin_outlined, obscure: true, keyboard: TextInputType.number, action: TextInputAction.done),
+            GlassField(key: const ValueKey('f.staffPin'), controller: pin, hint: t('pin'), icon: Icons.pin_outlined, obscure: true, keyboard: TextInputType.number, action: TextInputAction.done),
             const SizedBox(height: 16),
             SizedBox(
               height: 52,
               child: FilledButton(
+                key: const ValueKey('b.staffGo'),
                 style: FilledButton.styleFrom(backgroundColor: LD.navy, shape: const StadiumBorder()),
                 onPressed: busy
                     ? null
@@ -316,6 +319,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       Text(t('welcomeSub'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: LD.slate)),
       const SizedBox(height: 14),
       GlassField(
+        key: const ValueKey('f.loginId'),
         controller: _id,
         hint: t('loginId'),
         icon: Icons.mail_outline_rounded,
@@ -325,6 +329,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ),
       const SizedBox(height: 12),
       GlassField(
+        key: const ValueKey('f.loginPw'),
         controller: _pw,
         hint: t('password'),
         icon: Icons.lock_outline_rounded,
@@ -354,6 +359,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       Text(t('createSub'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: LD.slate)),
       const SizedBox(height: 12),
       GlassField(
+        key: const ValueKey('f.name'),
         controller: _name,
         hint: t('ownerName'),
         icon: Icons.person_outline_rounded,
@@ -363,6 +369,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ),
       const SizedBox(height: 10),
       GlassField(
+        key: const ValueKey('f.mobile'),
         controller: _mobile,
         hint: t('mobile'),
         prefixText: '+91',
@@ -372,6 +379,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ),
       const SizedBox(height: 10),
       GlassField(
+        key: const ValueKey('f.email'),
         controller: _email,
         hint: t('email'),
         icon: Icons.mail_outline_rounded,
@@ -381,6 +389,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ),
       const SizedBox(height: 10),
       GlassField(
+        key: const ValueKey('f.newPw'),
         controller: _spw,
         hint: t('createPassword'),
         icon: Icons.lock_outline_rounded,
@@ -414,6 +423,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       ]),
       const SizedBox(height: 4),
       InkWell(
+        key: const ValueKey('b.agree'),
         onTap: () {
           _agree = !_agree;
           _changed();
@@ -492,6 +502,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   child: Material(
                     type: MaterialType.transparency,
                     child: InkWell(
+                      key: const ValueKey('b.submit'),
                       borderRadius: BorderRadius.circular(999),
                       onTap: _submit,
                       child: Semantics(

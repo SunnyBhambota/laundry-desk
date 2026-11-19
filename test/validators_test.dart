@@ -10,6 +10,9 @@ void main() {
     expect(V.isEmail('owner@shop'), isFalse);
     expect(V.isLoginId('9876543210'), isTrue);
     expect(V.isLoginId('a@b.co'), isTrue);
+    expect(V.isLoginId('+91 98765 43210'), isTrue);
+    expect(V.isLoginId('09876543210'), isTrue);
+    expect(V.local('+91-98765-43210'), '9876543210');
   });
 
   test('password strength 0-4', () {

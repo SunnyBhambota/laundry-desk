@@ -7,8 +7,19 @@ class V {
   static bool isEmail(String s) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(s.trim());
 
   /// Mobile without country code: 7–15 digits (India: 10).
+  /// Indian number typed as +91 98…, 091…, 098… → last 10 digits.
+  static String local(String s, {String dial = '+91'}) {
+    var d = digits(s);
+    if (dial == '+91') {
+      if (d.length == 12 && d.startsWith('91')) d = d.substring(2);
+      if (d.length == 13 && d.startsWith('091')) d = d.substring(3);
+      if (d.length == 11 && d.startsWith('0')) d = d.substring(1);
+    }
+    return d;
+  }
+
   static bool isMobile(String s, {String dial = '+91'}) {
-    final d = digits(s);
+    final d = local(s, dial: dial);
     if (dial == '+91') return RegExp(r'^[6-9]\d{9}$').hasMatch(d);
     return d.length >= 7 && d.length <= 15;
   }

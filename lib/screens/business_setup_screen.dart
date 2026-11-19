@@ -155,7 +155,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
               Expanded(child: Container(height: 5, decoration: BoxDecoration(color: LD.navy, borderRadius: BorderRadius.circular(9)))),
             ]),
             const SizedBox(height: 18),
-            GlassField(controller: _shop, hint: t('shopName').replaceAll(RegExp(r'\s*\(.*\)'), ''), icon: Icons.storefront_outlined),
+            GlassField(key: const ValueKey('f.shop'), controller: _shop, hint: t('shopName').replaceAll(RegExp(r'\s*\(.*\)'), ''), icon: Icons.storefront_outlined),
             group(
               t('servicesQ'),
               Wrap(spacing: 8, runSpacing: 8, children: [
@@ -207,6 +207,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
             SizedBox(
               height: 54,
               child: FilledButton(
+                key: const ValueKey('b.finish'),
                 style: FilledButton.styleFrom(backgroundColor: LD.navy, shape: const StadiumBorder()),
                 onPressed: _saving ? null : _finish,
                 child: _saving
