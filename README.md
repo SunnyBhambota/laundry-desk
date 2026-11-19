@@ -37,6 +37,14 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
 Pickup booked → Received → Washing → Ready → Out for delivery → Delivered (ya Cancelled).
 Har piece ka tag (`LD-0012 · 3/7`), rack number, express (+50%), discount, GST, advance, udhaar, WhatsApp bill/update.
 
+## Print, export, security, tracking
+- **Bill:** Order → 🖨 (80 mm thermal roll PDF, QR code ke saath) · ⋮ → A5 bill print, PDF share (WhatsApp/email), QR tags print (har piece ka tag).
+- **Reports:** 🖨 report PDF · ⋮ → PDF share, orders CSV, customers CSV (Excel mein khulta hai), WhatsApp summary.
+- **App lock:** More → Shop settings → Security → 4-digit PIN. App khulne par aur 30 s se zyada background ke baad PIN; 5 galat try par 30 s rukna.
+  Passwords salted SHA-256; staff ka access role ke hisaab se; staff hatane par turant login band.
+- **Delivery tracking:** delivery staff duty par ho to har 2 min GPS point; pickup/delivery par location "proof" order par save.
+  Owner: Delivery board → agent card → aaj ka route (points + Google Maps route). Doosre phone se live dekhna cloud mode (Firebase) ke baad.
+
 ## Free vs Premium (suggested, owner approve kare)
 | Module | Free | Premium |
 |---|---|---|

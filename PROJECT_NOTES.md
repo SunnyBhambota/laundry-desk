@@ -29,6 +29,9 @@
 - Reports (today/7d/month/all, branch filter): collection, sales, orders, avg, expenses, profit, dues, by mode, daily bars,
   service mix, top customers, branches, expenses by type, WhatsApp summary. Expenses, Branches, Settings (GST, express %, due days, shop code).
 - Plans & modules + BrotriX admin (version 7 tap, PIN 2468). Sample data (ids `demo_`), clear.
+- Print/export: `services/export_service.dart` (pdf + printing + share_plus): roll80 bill, A5 bill, QR tags A4, report PDF, CSV.
+- Security: owner app-lock PIN (`AppState.lockHash`, lock after 30 s background), roles, PIN for staff.
+- Tracking: `services/tracking_service.dart` (geolocator) — delivery staff GPS every 2 min on duty + proof at handover; `ShopData.pings`; board trail sheet + Maps route.
 - Data: `lib/data/shop_data.dart` (JSON in SharedPreferences per owner; Firestore `shopData/{uid}` in cloud mode).
 
 ## NEXT (v0.2 ideas)
