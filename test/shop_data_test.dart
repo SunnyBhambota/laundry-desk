@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:laundry_desk/data/cloud_sync.dart';
+import 'package:laundry_desk/data/issue_models.dart';
+import 'package:laundry_desk/logic/payroll.dart';
 import 'package:laundry_desk/data/ops_models.dart';
 import 'package:laundry_desk/data/rate_card.dart';
 import 'package:laundry_desk/data/reports.dart';
@@ -145,5 +147,63 @@ void main() {
 
   test('cloud json is canonical (no write loops)', () {
     expect(CloudSync.enc({'b': 1, 'a': [1.0, {'y': 2, 'x': 'z'}]}), CloudSync.enc({'a': [1, {'x': 'z', 'y': 2.0}], 'b': 1.0}));
+  });
+
+  test('complaint, wrong delivery, re-open and payroll', () async {
+    final d = ShopData('local_issue');
+    final shop = _shop();
+    await d.initialise(shop);
+    final washer = d.addStaff(name: 'Ravi', phone: '9820033333', role: Role.washer, branchId: d.branches.first.id, pin: '3333', salary: 14000);
+    final agent = d.addStaff(name: 'Arjun', phone: '9820044444', role: Role.delivery, branchId: d.branches.first.id, pin: '4444', salary: 13000);
+    final c = d.addCustomer(name: 'Priya', phone: '9876543210');
+    final o = d.createOrder(
+      customerId: c.id,
+      branchId: d.branches.first.id,
+      lines: [OrderLine(garment: 'Shirt', service: 'Dry clean', qty: 4, rate: 80)],
+      by: 'owner',
+      homeDelivery: true,
+    );
+    d.setStatus(o, 'washing', by: washer.id);
+    d.setStatus(o, 'ready', by: washer.id);
+    d.assign(o, deliveryAgent: agent.id, by: 'owner');
+    d.setStatus(o, 'out', by: agent.id);
+    d.addPayment(o, o.total, 'cash', by: agent.id);
+    d.setStatus(o, 'delivered', by: agent.id);
+    expect(d.suspects(o)[washer.id], 'washing');
+    final i = d.openComplaint(o: o, pieces: [o.tags.first], reason: 'Stain left', by: 'owner', fault: [washer.id], pickupFromHome: true, agent: agent.id);
+    expect(i.code, 'ISS-0001');
+    expect(i.tasks.single.agent, agent.id);
+    d.issueStage(i, 'washing', by: washer.id);
+    d.closeIssue(i, by: 'owner');
+    d.reopenIssue(i, by: 'owner', note: 'still there');
+    expect(i.open, isTrue);
+    expect(i.reopenCount, 1);
+    final w = d.openWrongDelivery(o: o, subKind: 'missing', by: 'owner', fault: [agent.id], agent: agent.id);
+    expect(w.tasks.length, 2);
+    for (final tk in w.tasks) {
+      d.taskDone(w, tk, by: agent.id);
+    }
+    d.closeIssue(w, by: 'owner');
+    d.addPayout(agent.id, monthKey(DateTime.now()), 'advance', 1000);
+    final ps = buildPayslip(
+      s: agent,
+      month: monthKey(DateTime.now()),
+      orders: d.orders,
+      activity: d.activity,
+      attendance: d.attendance,
+      issues: d.issues,
+      payouts: d.payouts,
+      rules: d.rules,
+    );
+    expect(ps.drops, 1);
+    expect(ps.wrongs, 1);
+    expect(ps.collected, o.total);
+    // 13000 + 20 delivery + 0.5% of 320 − 50 penalty − 1000 advance
+    expect(ps.net, closeTo(13000 + 20 + 1.6 - 50 - 1000, .01));
+    final wp = buildPayslip(
+        s: washer, month: monthKey(DateTime.now()), orders: d.orders, activity: d.activity, attendance: d.attendance, issues: d.issues, payouts: d.payouts, rules: d.rules);
+    expect(wp.dry, 4);
+    expect(wp.complaints, 1);
+    expect(ExportService.issuesCsv(d, d.issues).split('\n').length, 3);
   });
 }

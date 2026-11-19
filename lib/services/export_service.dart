@@ -6,9 +6,11 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/issue_models.dart';
 import '../data/ops_models.dart';
 import '../data/reports.dart';
 import '../data/shop_data.dart';
+import '../logic/payroll.dart';
 import '../models/models.dart';
 import '../widgets/ui.dart' show money, qtyText, dmy, hm;
 
@@ -243,6 +245,101 @@ class ExportService {
             o.deliveryAgent.isEmpty ? '' : d.nameOf(o.deliveryAgent),
           ],
       ]);
+
+  static String issuesCsv(ShopData d, Iterable<Issue> issues) => _csv([
+        ['Issue', 'Type', 'Order', 'Customer', 'Branch', 'Reason', 'Pieces', 'Mistake by', 'Opened', 'Opened by', 'Closed', 'Hours', 'Re-opened', 'Compensation', 'Status'],
+        for (final i in issues)
+          [
+            i.code,
+            i.kind == 'wrong' ? 'Wrong delivery (${i.subKind})' : 'Complaint / re-wash',
+            d.order(i.orderId)?.code,
+            d.customer(i.customerId)?.name,
+            d.branch(i.branchId)?.name,
+            i.reason,
+            i.pieces.join(' / '),
+            i.fault.map((f) => f == 'none' ? 'Nobody' : d.nameOf(f)).join(' / '),
+            i.openedAt.toIso8601String().substring(0, 16).replaceAll('T', ' '),
+            d.nameOf(i.openedBy),
+            i.closedAt?.toIso8601String().substring(0, 16).replaceAll('T', ' '),
+            i.hoursOpen.toStringAsFixed(1),
+            i.reopenCount,
+            i.compensation.toStringAsFixed(2),
+            i.closed ? 'closed' : i.stage,
+          ],
+      ]);
+
+  static String payrollCsv(List<Payslip> slips) => _csv([
+        ['Staff', 'Role', 'Month', 'Days', 'Orders', 'Sales', 'Pieces', 'Kg', 'Deliveries', 'Pickups', 'Collected', 'Complaints', 'Wrong deliveries', 'Salary', 'Incentive', 'Advances', 'Net', 'Paid', 'Balance'],
+        for (final p in slips)
+          [
+            p.staff.name,
+            p.staff.role.name,
+            p.month,
+            p.days,
+            p.orders,
+            p.sales.toStringAsFixed(2),
+            p.pieces,
+            p.kg,
+            p.drops,
+            p.pickups,
+            p.collected.toStringAsFixed(2),
+            p.complaints,
+            p.wrongs,
+            p.staff.salary.toStringAsFixed(2),
+            p.incentive.toStringAsFixed(2),
+            p.advances.toStringAsFixed(2),
+            p.net.toStringAsFixed(2),
+            p.paid.toStringAsFixed(2),
+            p.balance.toStringAsFixed(2),
+          ],
+      ]);
+
+  static Future<Uint8List> payslipPdf({required ShopProfile shop, required ShopData data, required Payslip p}) async {
+    final cur = shop.currency;
+    final doc = pw.Document(title: 'Salary slip ${p.staff.name} ${p.month}', author: shop.shopName);
+    pw.Widget row(String a, String b, String v, {bool bold = false}) => pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 3),
+          child: pw.Row(children: [
+            pw.Expanded(
+              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Text(a, style: pw.TextStyle(fontWeight: bold ? pw.FontWeight.bold : null)),
+                if (b.isNotEmpty) pw.Text(b, style: const pw.TextStyle(fontSize: 8, color: _slate)),
+              ]),
+            ),
+            pw.Text(v, style: pw.TextStyle(fontWeight: bold ? pw.FontWeight.bold : null)),
+          ]),
+        );
+    doc.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a5,
+      margin: const pw.EdgeInsets.all(24),
+      build: (_) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        pw.Text(shop.shopName, style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: _navy)),
+        pw.Text('Salary slip - ${p.month}', style: const pw.TextStyle(color: _slate)),
+        pw.SizedBox(height: 10),
+        row('Name', '', p.staff.name, bold: true),
+        row('Role', '', p.staff.role.name),
+        row('Branch', '', data.branch(p.staff.branchId)?.name ?? ''),
+        row('Days present', '', '${p.days}'),
+        pw.Divider(),
+        for (final l in p.lines) row(l.label, l.calc, _m(l.amount, cur)),
+        for (final x in p.payouts.where((x) => x.kind != 'paid'))
+          row(x.kind == 'advance' ? 'Advance' : (x.kind == 'bonus' ? 'Extra bonus' : 'Deduction'), x.note, '${x.kind == 'bonus' ? '' : '-'}${_m(x.amount, cur)}'),
+        pw.Divider(),
+        row('Net pay', '', _m(p.net, cur), bold: true),
+        row('Paid', '', _m(p.paid, cur)),
+        row('Balance', '', _m(p.balance, cur), bold: true),
+        pw.Spacer(),
+        pw.Row(children: [
+          pw.Text('Staff signature: ____________'),
+          pw.Spacer(),
+          pw.Text('Owner: ____________'),
+        ]),
+        pw.SizedBox(height: 8),
+        pw.Text('Laundry Desk by BrotriX Technologies', style: const pw.TextStyle(fontSize: 7, color: _slate)),
+      ]),
+    ));
+    return doc.save();
+  }
 
   static String customersCsv(ShopData d) => _csv([
         ['Name', 'Phone', 'Type', 'Address', 'Orders', 'Spent', 'Due'],

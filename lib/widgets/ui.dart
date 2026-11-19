@@ -340,3 +340,6 @@ class ShareRow extends StatelessWidget {
         ]),
       );
 }
+
+/// Inline English / Hindi text for newer screens.
+String L(AppState app, String en, String hi) => app.lang == 'hi' ? hi : en;

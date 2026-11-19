@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
+import 'payroll_screens.dart';
 
 /// Owner / manager: team, attendance and performance (staff tracking module).
 class StaffScreen extends StatefulWidget {
@@ -31,11 +32,11 @@ class _StaffScreenState extends State<StaffScreen> {
     final tracking = app.module('staffTracking');
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(t('staff')),
-          bottom: TabBar(tabs: [Tab(text: t('team')), Tab(text: t('attendance')), Tab(text: t('performance'))]),
+          bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: t('team')), Tab(text: t('attendance')), Tab(text: t('performance')), Tab(text: L(app, 'Payroll & ranks', 'पगार और रैंक'))]),
         ),
         floatingActionButton: app.canManage
             ? FloatingActionButton.extended(
@@ -148,6 +149,7 @@ class _StaffScreenState extends State<StaffScreen> {
                 ]);
               }),
           ]),
+          const PayrollTab(),
         ]),
       ),
     );

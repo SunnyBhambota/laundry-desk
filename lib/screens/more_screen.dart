@@ -11,6 +11,9 @@ import '../widgets/ui.dart';
 import 'admin_screens.dart';
 import 'customers_screen.dart';
 import 'delivery_screen.dart';
+import 'issue_screens.dart';
+import 'payroll_screens.dart';
+import '../data/issue_models.dart';
 import 'reports_screen.dart';
 
 class MoreScreen extends StatefulWidget {
@@ -72,16 +75,23 @@ class _MoreScreenState extends State<MoreScreen> {
           group([
             tile(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
             if (app.module('delivery')) tile(Icons.delivery_dining_outlined, t('delivery'), () => go(const DeliveryBoardScreen())),
+            tile(Icons.report_problem_outlined, L(app, 'Complaints & issues', 'शिकायतें और इश्यू'), () => go(const IssuesScreen())),
             tile(Icons.list_alt_rounded, t('rateCard'), () => go(const RateCardScreen())),
             if (app.canManage) tile(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
             if (app.canManage) tile(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
             if (app.isOwner) tile(Icons.store_mall_directory_outlined, t('branches'), () => go(const BranchesScreen())),
+            if (app.isOwner) tile(Icons.tune_rounded, L(app, 'Commission rules', 'कमीशन के नियम'), () => go(const RulesScreen())),
           ]),
         if (app.isOwner)
           group([
             tile(Icons.workspace_premium_outlined, t('plans'), () => go(const PlansScreen()),
                 sub: d.plan == 'trial' ? t('trialLeft').replaceAll('{n}', '${shop.trialDaysLeft(AppConfig.trialDays)}') : d.plan.toUpperCase()),
             tile(Icons.tune_rounded, t('settings'), () => go(const SettingsScreen()), sub: '${t('shopCode')}: ${d.shopCode}'),
+          ]),
+        if (!app.isOwner && (d.rules['showEarnings'] as bool? ?? true))
+          group([
+            tile(Icons.savings_outlined, L(app, 'My earnings', 'मेरी कमाई'),
+                () => go(PayslipScreen(staffId: app.staffUser!.id, month: monthKey(DateTime.now()), mine: true))),
           ]),
         group([
           ListTile(

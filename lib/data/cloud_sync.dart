@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'issue_models.dart';
 import 'ops_models.dart';
 import 'shop_data.dart';
 
@@ -23,8 +24,8 @@ class CloudSync {
   /// false for staff: they may not write settings, staff, branches, rates or expenses.
   bool admin = true;
 
-  static const adminCols = {'branches', 'garments', 'staff', 'expenses'};
-  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings'};
+  static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts'};
+  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues'};
   static const allCols = [...adminCols, ...memberCols];
 
   FirebaseFirestore get _fs => FirebaseFirestore.instance;
@@ -79,6 +80,12 @@ class CloudSync {
     for (final x in d.activity) {
       m['activity/${x.id}'] = x.toJson();
     }
+    for (final x in d.issues) {
+      m['issues/${x.id}'] = x.toJson();
+    }
+    for (final x in d.payouts) {
+      m['payouts/${x.id}'] = x.toJson();
+    }
     d.pings.forEach((k, v) => m['pings/$k'] = {'list': v.map((p) => p.toJson()).toList()});
     m['meta/settings'] = d.settingsJson();
     m['meta/counter'] = {'nextNumber': d.nextNumber};
@@ -122,6 +129,10 @@ class CloudSync {
         put<Expense>(d.expenses, Expense.fromJson, (x) => x.id == id);
       case 'activity':
         put<Activity>(d.activity, Activity.fromJson, (x) => x.id == id);
+      case 'issues':
+        put<Issue>(d.issues, Issue.fromJson, (x) => x.id == id);
+      case 'payouts':
+        put<Payout>(d.payouts, Payout.fromJson, (x) => x.id == id);
       case 'pings':
         if (j == null) {
           d.pings.remove(id);
@@ -180,6 +191,10 @@ class CloudSync {
         d.activity.clear();
       case 'pings':
         d.pings.clear();
+      case 'issues':
+        d.issues.clear();
+      case 'payouts':
+        d.payouts.clear();
     }
   }
 

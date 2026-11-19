@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'issue_models.dart';
 import 'ops_models.dart';
 import 'shop_data.dart';
 
@@ -191,6 +192,59 @@ class SampleData {
       final ll = starts[o.deliveryAgent] ?? starts.values.first;
       o.proof = Ping(lat: ll[0] + r.nextDouble() * .02, lng: ll[1] + r.nextDouble() * .02, at: o.timeOf('delivered')!, orderId: o.id);
     }
+    // issues: complaints and wrong deliveries on delivered orders
+    final delivered = d.orders.where((o) => o.status == 'delivered').toList();
+    const reasons = complaintReasons;
+    for (var k = 0; k < 9 && k < delivered.length; k++) {
+      final o = delivered[(k * 7) % delivered.length];
+      final at = o.timeOf('delivered')!.add(Duration(hours: 3 + k));
+      if (at.isAfter(now)) continue;
+      final wrong = k % 3 == 2;
+      final washer = 'demo_s3';
+      final agent = o.deliveryAgent.isEmpty ? 'demo_s4' : o.deliveryAgent;
+      final closed = k < 6;
+      final i = Issue(
+        id: 'demo_i$k',
+        number: k + 1,
+        kind: wrong ? 'wrong' : 'complaint',
+        subKind: wrong ? 'swap' : '',
+        orderId: o.id,
+        otherOrderId: wrong ? delivered[(k * 7 + 1) % delivered.length].id : '',
+        customerId: o.customerId,
+        branchId: o.branchId,
+        openedAt: at,
+        openedBy: 'demo_s1',
+        dueAt: at.add(const Duration(days: 1)),
+        pieces: [o.tags.first],
+        reason: wrong ? 'Wrong delivery' : reasons[k % 5],
+        fault: [wrong ? agent : washer],
+        compensation: k == 4 ? 100 : 0,
+        stage: closed ? 'returned' : (wrong ? 'open' : 'washing'),
+        closed: closed,
+        closedAt: closed ? at.add(Duration(hours: 5 + k)) : null,
+        reopenCount: k == 7 ? 1 : 0,
+        history: [
+          StatusEvent(status: 'open', at: at, by: 'demo_s1'),
+          if (!wrong) StatusEvent(status: 'received', at: at.add(const Duration(hours: 1)), by: agent),
+          if (!wrong) StatusEvent(status: 'washing', at: at.add(const Duration(hours: 2)), by: washer),
+          if (closed && !wrong) StatusEvent(status: 'ready', at: at.add(const Duration(hours: 4)), by: washer),
+          if (closed) StatusEvent(status: 'closed', at: at.add(Duration(hours: 5 + k)), by: 'demo_s1'),
+          if (k == 7) StatusEvent(status: 'reopened', at: at.add(const Duration(hours: 9)), by: 'owner', note: 'Stain still there'),
+        ],
+        tasks: wrong
+            ? [
+                IssueTask(text: 'Take back clothes from the wrong customer', agent: agent, done: closed, doneAt: closed ? at.add(const Duration(hours: 2)) : null, doneBy: agent),
+                IssueTask(text: 'Give the right clothes', agent: agent, done: closed, doneAt: closed ? at.add(const Duration(hours: 3)) : null, doneBy: agent),
+              ]
+            : [],
+      );
+      d.issues.add(i);
+    }
+    // staff advances this month
+    d.payouts.addAll([
+      Payout(id: 'demo_p1', staffId: 'demo_s4', month: monthKey(now), kind: 'advance', amount: 2000, at: now.subtract(const Duration(days: 10))),
+      Payout(id: 'demo_p2', staffId: 'demo_s3', month: monthKey(now), kind: 'advance', amount: 1500, at: now.subtract(const Duration(days: 6))),
+    ]);
     d.hasSample = true;
     d.changed();
   }

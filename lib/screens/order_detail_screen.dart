@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/ops_models.dart';
 import '../logic/messages.dart';
 import '../services/export_service.dart';
+import 'issue_screens.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -114,6 +115,10 @@ class OrderDetailScreen extends StatelessWidget {
             Expanded(child: _ActionBtn(icon: Icons.map_outlined, label: t('map'), onTap: () => openMaps(c!.address))),
           ],
         ]),
+        for (final iss in d.issuesOf(o.id)) ...[
+          const SizedBox(height: 10),
+          IssueTile(issue: iss),
+        ],
         const SizedBox(height: 12),
         // items
         SectionCard(
@@ -210,6 +215,34 @@ class OrderDetailScreen extends StatelessWidget {
       ]),
       bottomNavigationBar: o.status == 'cancelled'
           ? null
+          : o.status == 'delivered'
+              ? SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                    child: Row(children: [
+                      Expanded(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE8742A), minimumSize: const Size.fromHeight(52), shape: const StadiumBorder()),
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ComplaintScreen(orderId: o.id))),
+                          child: Text(L(app, 'Complaint / re-wash', 'शिकायत / दोबारा धुलाई'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFB42318),
+                            side: const BorderSide(color: Color(0xFFB42318), width: 1.5),
+                            minimumSize: const Size.fromHeight(52),
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WrongDeliveryScreen(orderId: o.id))),
+                          child: Text(L(app, 'Wrong delivery', 'गलत डिलीवरी'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ]),
+                  ),
+                )
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),

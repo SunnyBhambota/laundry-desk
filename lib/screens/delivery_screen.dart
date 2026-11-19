@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../data/ops_models.dart';
 import '../logic/messages.dart';
 import '../services/tracking_service.dart';
+import 'issue_screens.dart';
+import 'payroll_screens.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
@@ -227,7 +229,33 @@ class MyTasksScreen extends StatelessWidget {
         _DutyCard(),
         const SizedBox(height: 10),
         _TrackingBanner(),
+        const SizedBox(height: 10),
+        const MyEarningsCard(),
         const SizedBox(height: 12),
+        Builder(builder: (_) {
+          final mine = [
+            for (final i in d.issues.where((i) => i.open))
+              for (final tk in i.tasks.where((tk) => !tk.done && tk.agent == me)) (i, tk),
+          ];
+          if (mine.isEmpty) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SectionCard(
+              title: L(app, 'Issue tasks', 'इश्यू के काम'),
+              child: Column(children: [
+                for (final (i, tk) in mine)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.report_problem_outlined, color: Color(0xFFB42318)),
+                    title: Text(tk.text),
+                    subtitle: Text('${i.code} · ${d.customer(tk.customerId)?.address ?? ''}'),
+                    trailing: TextButton(onPressed: () => d.taskDone(i, tk, by: me), child: Text(L(app, 'Done', 'हो गया'))),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => IssueDetailScreen(issueId: i.id))),
+                  ),
+              ]),
+            ),
+          );
+        }),
         Row(children: [
           Expanded(child: _stat(t('pickups'), '${pickups.length}')),
           const SizedBox(width: 8),
@@ -281,7 +309,13 @@ class QueueScreen extends StatelessWidget {
       appBar: AppBar(title: Text(t('queue'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         _DutyCard(),
+        const SizedBox(height: 10),
+        const MyEarningsCard(),
         const SizedBox(height: 12),
+        for (final i in d.issues.where((i) => i.open && i.kind == 'complaint' && (i.stage == 'received' || i.stage == 'washing'))) ...[
+          IssueTile(issue: i),
+          const SizedBox(height: 10),
+        ],
         if (list.isEmpty) EmptyState(icon: Icons.local_laundry_service_outlined, text: t('noTasks')),
         for (final o in list) ...[
           Container(

@@ -11,6 +11,7 @@ import '../config/app_config.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
 import 'cloud_sync.dart';
+import 'issue_models.dart';
 import 'ops_models.dart';
 import 'rate_card.dart';
 
@@ -39,6 +40,8 @@ class ShopData extends ChangeNotifier {
   List<Attendance> attendance = [];
   List<Expense> expenses = [];
   List<Activity> activity = [];
+  List<Issue> issues = [];
+  List<Payout> payouts = [];
   /// Delivery staff GPS trail: staffId → points (last 200 each).
   Map<String, List<Ping>> pings = {};
   /// Owner app-lock PIN (salted hash, empty = off).
@@ -244,6 +247,8 @@ class ShopData extends ChangeNotifier {
         'pings': pings.map((k, v) => MapEntry(k, v.map((p) => p.toJson()).toList())),
         'lockHash': lockHash,
         'rules': rules,
+        'issues': issues.map((e) => e.toJson()).toList(),
+        'payouts': payouts.map((e) => e.toJson()).toList(),
       };
 
   void _fromJson(Map<String, dynamic> j) {
@@ -271,6 +276,8 @@ class ShopData extends ChangeNotifier {
         k, (v as List).map((e) => Ping.fromJson(Map<String, dynamic>.from(e as Map))).toList()));
     lockHash = j['lockHash'] as String? ?? '';
     if (j['rules'] is Map) rules = Map<String, dynamic>.from(j['rules'] as Map);
+    issues = list('issues').map(Issue.fromJson).toList();
+    payouts = list('payouts').map(Payout.fromJson).toList();
   }
 
   // ---------------- plan & modules ----------------
@@ -466,6 +473,166 @@ class ShopData extends ChangeNotifier {
     return g;
   }
 
+  // ---------------- issues (complaint / re-wash / wrong delivery) ----------------
+
+  Issue? issue(String id) => issues.where((i) => i.id == id).firstOrNull;
+  List<Issue> issuesOf(String orderId) => issues.where((i) => i.orderId == orderId || i.otherOrderId == orderId).toList();
+
+  int get _nextIssueNo => issues.fold<int>(0, (m, i) => i.number > m ? i.number : m) + 1;
+
+  /// Who probably caused it, from the order history.
+  Map<String, String> suspects(LaundryOrder o) {
+    final m = <String, String>{};
+    for (final h in o.history) {
+      if (h.by.isEmpty || h.by == 'owner') continue;
+      if (h.status == 'washing' || h.status == 'ready') m[h.by] = 'washing';
+      if (h.status == 'out' || h.status == 'delivered') m.putIfAbsent(h.by, () => 'delivery');
+    }
+    if (o.deliveryAgent.isNotEmpty) m.putIfAbsent(o.deliveryAgent, () => 'delivery');
+    if (o.createdBy.isNotEmpty && o.createdBy != 'owner') m.putIfAbsent(o.createdBy, () => 'counter');
+    return m;
+  }
+
+  Issue openComplaint({
+    required LaundryOrder o,
+    required List<String> pieces,
+    required String reason,
+    required String by,
+    String note = '',
+    List<String> fault = const [],
+    double compensation = 0,
+    bool pickupFromHome = false,
+    String agent = '',
+    DateTime? dueAt,
+  }) {
+    final now = DateTime.now();
+    final i = Issue(
+      id: newId('i'),
+      number: _nextIssueNo,
+      kind: 'complaint',
+      orderId: o.id,
+      customerId: o.customerId,
+      branchId: o.branchId,
+      openedAt: now,
+      openedBy: by,
+      dueAt: dueAt ?? now.add(const Duration(days: 1)),
+      pieces: pieces,
+      reason: reason,
+      note: note,
+      fault: fault,
+      compensation: compensation,
+      stage: pickupFromHome ? 'pickup' : 'received',
+      history: [
+        StatusEvent(status: 'open', at: now, by: by, note: reason),
+        StatusEvent(status: pickupFromHome ? 'pickup' : 'received', at: now, by: by),
+      ],
+    );
+    if (pickupFromHome) i.tasks.add(IssueTask(text: 'Pick up ${pieces.length} pcs for re-wash', agent: agent, customerId: o.customerId));
+    if (compensation > 0 && o.due > 0) o.discount += compensation.clamp(0, o.due).toDouble();
+    issues.add(i);
+    log(by, 'issue.open', orderId: o.id, text: i.code);
+    changed();
+    return i;
+  }
+
+  Issue openWrongDelivery({
+    required LaundryOrder o,
+    required String subKind,
+    required String by,
+    LaundryOrder? other,
+    String note = '',
+    List<String> fault = const [],
+    String agent = '',
+    List<String> pieces = const [],
+  }) {
+    final now = DateTime.now();
+    final me = customer(o.customerId)?.name ?? '';
+    final them = other == null ? '' : (customer(other.customerId)?.name ?? '');
+    final tasks = <IssueTask>[];
+    switch (subKind) {
+      case 'swap':
+        tasks
+          ..add(IssueTask(text: 'Take back $me\'s clothes from $them', agent: agent, customerId: other?.customerId ?? ''))
+          ..add(IssueTask(text: 'Take back $them\'s clothes from $me and give $me the right ones', agent: agent, customerId: o.customerId))
+          ..add(IssueTask(text: 'Give $them their own clothes', agent: agent, customerId: other?.customerId ?? ''));
+      case 'wrongaddr':
+        tasks
+          ..add(IssueTask(text: 'Collect the order from the wrong address', agent: agent))
+          ..add(IssueTask(text: 'Deliver to $me', agent: agent, customerId: o.customerId));
+      default:
+        tasks
+          ..add(IssueTask(text: 'Find the missing pieces in the shop / racks', agent: by))
+          ..add(IssueTask(text: 'Deliver missing pieces to $me', agent: agent, customerId: o.customerId));
+    }
+    final i = Issue(
+      id: newId('i'),
+      number: _nextIssueNo,
+      kind: 'wrong',
+      subKind: subKind,
+      orderId: o.id,
+      otherOrderId: other?.id ?? '',
+      customerId: o.customerId,
+      branchId: o.branchId,
+      openedAt: now,
+      openedBy: by,
+      dueAt: now.add(const Duration(hours: 24)),
+      pieces: pieces,
+      reason: 'Wrong delivery',
+      note: note,
+      fault: fault,
+      tasks: tasks,
+      history: [StatusEvent(status: 'open', at: now, by: by, note: subKind)],
+    );
+    issues.add(i);
+    log(by, 'issue.open', orderId: o.id, text: i.code);
+    changed();
+    return i;
+  }
+
+  void issueStage(Issue i, String stage, {required String by, String note = ''}) {
+    i.stage = stage;
+    i.history.add(StatusEvent(status: stage, at: DateTime.now(), by: by, note: note));
+    log(by, 'issue.$stage', orderId: i.orderId, text: i.code);
+    changed();
+  }
+
+  void taskDone(Issue i, IssueTask task, {required String by}) {
+    task
+      ..done = true
+      ..doneAt = DateTime.now()
+      ..doneBy = by;
+    i.history.add(StatusEvent(status: 'task', at: DateTime.now(), by: by, note: task.text));
+    log(by, 'issue.task', orderId: i.orderId, text: i.code);
+    changed();
+  }
+
+  void closeIssue(Issue i, {required String by, String note = ''}) {
+    i
+      ..closed = true
+      ..closedAt = DateTime.now();
+    i.history.add(StatusEvent(status: 'closed', at: DateTime.now(), by: by, note: note));
+    log(by, 'issue.closed', orderId: i.orderId, text: i.code);
+    changed();
+  }
+
+  void reopenIssue(Issue i, {required String by, required String note}) {
+    i
+      ..closed = false
+      ..closedAt = null
+      ..reopenCount += 1
+      ..stage = i.kind == 'complaint' ? 'received' : 'open';
+    i.history.add(StatusEvent(status: 'reopened', at: DateTime.now(), by: by, note: note));
+    log(by, 'issue.reopened', orderId: i.orderId, text: i.code);
+    changed();
+  }
+
+  // ---------------- payroll ----------------
+
+  void addPayout(String staffId, String month, String kind, double amount, {String mode = 'cash', String note = ''}) {
+    payouts.add(Payout(id: newId('p'), staffId: staffId, month: month, kind: kind, amount: amount, at: DateTime.now(), mode: mode, note: note));
+    changed();
+  }
+
   void addPing(String staffId, Ping p) {
     final l = pings.putIfAbsent(staffId, () => []);
     l.add(p);
@@ -488,6 +655,8 @@ class ShopData extends ChangeNotifier {
     attendance.removeWhere((a) => a.staffId.startsWith('demo_'));
     activity.removeWhere((a) => a.by.startsWith('demo_') || a.orderId.startsWith('demo_'));
     pings.removeWhere((k, _) => k.startsWith('demo_'));
+    issues.removeWhere((i) => i.id.startsWith('demo_'));
+    payouts.removeWhere((p) => p.id.startsWith('demo_'));
     hasSample = false;
     if (orders.isEmpty) nextNumber = 1;
     changed();

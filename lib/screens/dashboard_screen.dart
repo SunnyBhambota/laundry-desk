@@ -12,6 +12,7 @@ import '../widgets/ui.dart';
 import 'admin_screens.dart';
 import 'customers_screen.dart';
 import 'delivery_screen.dart';
+import 'issue_screens.dart';
 import 'new_order_screen.dart';
 import 'orders_screen.dart';
 import 'reports_screen.dart';
@@ -194,6 +195,36 @@ class DashboardScreen extends StatelessWidget {
                       () => go(const OrdersScreen(initialFilter: 'ready'))),
                 ],
               ),
+              Builder(builder: (_) {
+                final openIss = d.issues.where((i) => i.open && (scope == null || i.branchId == scope)).toList();
+                if (openIss.isEmpty) return const SizedBox.shrink();
+                final late = openIss.where((i) => DateTime.now().isAfter(i.dueAt)).length;
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: const Color(0xFFFDE8E8),
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => go(const IssuesScreen()),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(children: [
+                          const Icon(Icons.report_problem_outlined, color: Color(0xFFB42318)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '${openIss.length} ${L(app, 'open complaints / issues', 'खुली शिकायतें / इश्यू')}${late > 0 ? ' · $late ${L(app, 'late', 'देरी')}' : ''}',
+                              style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB42318)),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: Color(0xFFB42318)),
+                        ]),
+                      ),
+                    ),
+                  ),
+                );
+              }),
               if (d.hasSample) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -220,12 +251,12 @@ class DashboardScreen extends StatelessWidget {
                   quick(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
                   quick(Icons.delivery_dining_outlined, t('delivery'),
                       app.module('delivery') ? () => go(const DeliveryBoardScreen()) : () => toast(context, t('moduleOff'))),
-                  quick(Icons.list_alt_rounded, t('qRates'), () => go(const RateCardScreen())),
+                  quick(Icons.report_problem_outlined, L(app, 'Issues', 'इश्यू'), () => go(const IssuesScreen())),
                   if (app.canManage) ...[
                     quick(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
                     quick(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
                     quick(Icons.groups_outlined, t('staff'), () => go(const StaffScreen())),
-                    quick(Icons.store_mall_directory_outlined, t('branches'), () => go(const BranchesScreen())),
+                    quick(Icons.list_alt_rounded, t('qRates'), () => go(const RateCardScreen())),
                   ],
                 ],
               ),

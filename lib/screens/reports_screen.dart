@@ -9,6 +9,7 @@ import '../services/export_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import 'issue_screens.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -113,6 +114,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         const SizedBox(height: 10),
         kpi(t('pendingDues'), money(r.pendingDues, cur), color: const Color(0xFF8A5A00)),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const IssueReportsScreen())),
+          icon: const Icon(Icons.report_problem_outlined),
+          label: Text(L(app, 'Complaint & wrong-delivery report', 'शिकायत और गलत डिलीवरी रिपोर्ट')),
+        ),
         const SizedBox(height: 12),
         if (_p != Period.today && _p != Period.all)
           SectionCard(title: t('dailyColl'), child: Bars(values: barVals, labels: barLabels)),
