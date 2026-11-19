@@ -70,6 +70,24 @@ class OrderDetailScreen extends StatelessWidget {
                 ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'Bill ${o.code}');
               } else if (v == 'tags') {
                 ExportService.printPdf(await ExportService.tagsPdf(shop: app.shop!, data: d, o: o), 'Tags ${o.code}');
+              } else if (v == 'move' && context.mounted) {
+                sheet(context, L(app, 'Move order to branch', 'ऑर्डर दूसरी ब्रांच में भेजें'), (c) => Column(children: [
+                      for (final b in d.branches.where((b) => b.id != o.branchId))
+                        ListTile(
+                          leading: const Icon(Icons.store_mall_directory_outlined),
+                          title: Text(b.name),
+                          subtitle: b.address.isEmpty ? null : Text(b.address),
+                          onTap: () {
+                            final from = d.branch(o.branchId)?.name ?? '';
+                            o.branchId = b.id;
+                            o.history.add(StatusEvent(status: 'moved', at: DateTime.now(), by: app.actorId, note: '$from → ${b.name}'));
+                            d.log(app.actorId, 'order.move', orderId: o.id, text: '${o.code} $from → ${b.name}');
+                            d.changed();
+                            Navigator.pop(c);
+                            toast(context, '${o.code} → ${b.name}');
+                          },
+                        ),
+                    ]));
               } else if (v == 'cancel' && context.mounted &&
                   await confirm(context, t('cancelOrder'), t('cancelSure'), ok: t('cancelOrder'), danger: true)) {
                 d.setStatus(o, 'cancelled', by: app.actorId);
@@ -85,6 +103,8 @@ class OrderDetailScreen extends StatelessWidget {
               PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
               PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
               if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
+              if (app.canManage && o.open && d.branches.length > 1)
+                PopupMenuItem(value: 'move', child: Text(L(app, 'Move to another branch', 'दूसरी ब्रांच में भेजें'))),
               if (app.canManage && o.open) PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder'))),
             ],
           ),

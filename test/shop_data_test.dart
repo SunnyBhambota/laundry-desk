@@ -308,5 +308,39 @@ void main() {
     sample.clearSample();
     expect(sample.coupons.where((x) => x.id.startsWith('demo_')), isEmpty);
   });
+
+  test('multi-branch: totals add up, CSV, agents, booking link', () async {
+    final d = ShopData('local_mb');
+    final shop = _shop();
+    await d.initialise(shop);
+    SampleData.fill(d, services: shop.services);
+    expect(d.branches.length, 3);
+    for (final range in [DateRange.of(Period.today), DateRange.of(Period.month), DateRange.of(Period.all)]) {
+      final all = Report(orders: d.orders, expenses: d.expenses, range: range);
+      var sales = 0.0, coll = 0.0, exp = 0.0, n = 0;
+      for (final b in d.branches) {
+        final r = Report(orders: d.orders, expenses: d.expenses, range: range, branchId: b.id);
+        sales += r.sales;
+        coll += r.collected;
+        exp += r.expense;
+        n += r.orderCount;
+      }
+      expect(sales, closeTo(all.sales, .5));
+      expect(coll, closeTo(all.collected, .5));
+      expect(exp, closeTo(all.expense, .5));
+      expect(n, all.orderCount);
+    }
+    final csv = ExportService.branchCsv(d, DateRange.of(Period.month)).split('\n');
+    expect(csv.length, d.branches.length + 1);
+    final b2 = d.branches[1];
+    final agents = d.agentsFor(b2.id);
+    expect(agents, isNotEmpty);
+    expect(agents.every((s) => s.role == Role.delivery), isTrue);
+    expect(ExportService.bookingLink('Sparkle', '98200 11111'), startsWith('https://wa.me/919820011111?text='));
+    final pdf = await ExportService.reportPdf(shop: shop, data: d, r: Report(orders: d.orders, expenses: d.expenses, range: DateRange.of(Period.month)), periodLabel: 'month');
+    expect(pdf.length, greaterThan(1000));
+    final poster = await ExportService.bookingPosterPdf(shop: shop, link: 'https://wa.me/919820011111');
+    expect(poster.length, greaterThan(1000));
+  });
 }
 

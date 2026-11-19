@@ -22,6 +22,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
   final _address = TextEditingController();
   final _referral = TextEditingController();
   final _mobile = TextEditingController();
+  final _pw = TextEditingController();
   final Set<String> _services = {'Wash & fold', 'Dry clean', 'Steam iron'};
   String _branches = '1';
   String _team = '1–3';
@@ -55,9 +56,21 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
       toast(context, app.t('err.mobile'));
       return;
     }
+    if (needMobile && _pw.text.length < 8) {
+      toast(context, L(app, 'Make a password (8+ letters) so you can also log in with your mobile.', 'पासवर्ड बनाएँ (8+ अक्षर) ताकि मोबाइल से भी लॉगिन हो सके।'));
+      return;
+    }
     setState(() => _saving = true);
     if (needMobile) {
-      final full = digits.length == 10 ? '91$digits' : digits;
+      final full = AuthService.fullMobile(_mobile.text);
+      try {
+        await AuthService.instance.addPassword(full, _pw.text);
+      } on AuthError catch (e) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        toast(context, e.code == 'exists' ? L(app, 'This mobile already has an account. Log out and log in with mobile + password.', 'इस मोबाइल का अकाउंट पहले से है। लॉगआउट करके मोबाइल + पासवर्ड से लॉगिन करें।') : app.t('err.${e.code}'));
+        return;
+      }
       await AuthService.instance.saveOwnerMobile(app.owner!, full);
       app.owner = Owner(uid: app.owner!.uid, name: app.owner!.name, mobile: full, email: app.owner!.email);
     }
@@ -184,6 +197,8 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
             const SizedBox(height: 14),
             if (app.owner != null && app.owner!.mobile.isEmpty) ...[
               GlassField(controller: _mobile, hint: t('mobile'), icon: Icons.phone_iphone_rounded),
+              const SizedBox(height: 10),
+              GlassField(controller: _pw, hint: L(app, 'Password for mobile login (8+)', 'मोबाइल लॉगिन का पासवर्ड (8+)'), icon: Icons.lock_outline_rounded, obscure: true),
               const SizedBox(height: 10),
             ],
             GlassField(controller: _address, hint: t('address'), icon: Icons.place_outlined),

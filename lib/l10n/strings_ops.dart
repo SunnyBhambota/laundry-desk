@@ -225,6 +225,7 @@ const opsEn = <String, String>{
   'limit.branch': 'Free plan: 1 branch. Choose the Business plan for more branches.',
   'err.network': 'No internet. Please try again.',
   'edited': 'Edited',
+  'moved': 'Moved branch',
   'refund': 'Refund',
 };
 
@@ -440,5 +441,6 @@ const opsHi = <String, String>{
   'limit.staff': 'फ़्री प्लान: 2 स्टाफ़ तक। और → प्लान से प्लान चुनें।',
   'limit.branch': 'फ़्री प्लान: 1 ब्रांच। ज़्यादा ब्रांच के लिए बिज़नेस प्लान।',
   'edited': 'बदला गया',
+  'moved': 'ब्रांच बदली',
   'refund': 'रिफ़ंड',
 };
