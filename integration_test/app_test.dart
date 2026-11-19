@@ -14,7 +14,22 @@ import 'package:integration_test/integration_test.dart';
 import 'package:laundry_desk/data/ops_models.dart';
 import 'package:laundry_desk/data/reports.dart';
 import 'package:laundry_desk/main.dart' as app;
+import 'package:laundry_desk/data/issue_models.dart';
+import 'package:laundry_desk/screens/admin_screens.dart';
+import 'package:laundry_desk/screens/customers_screen.dart';
+import 'package:laundry_desk/screens/dashboard_screen.dart';
+import 'package:laundry_desk/screens/delivery_screen.dart';
+import 'package:laundry_desk/screens/issue_screens.dart';
+import 'package:laundry_desk/screens/more_screen.dart';
+import 'package:laundry_desk/screens/new_order_screen.dart';
+import 'package:laundry_desk/screens/order_detail_screen.dart';
+import 'package:laundry_desk/screens/orders_screen.dart';
+import 'package:laundry_desk/screens/payroll_screens.dart';
+import 'package:laundry_desk/screens/reports_screen.dart';
 import 'package:laundry_desk/screens/shell.dart';
+import 'package:laundry_desk/screens/staff_screen.dart';
+import 'package:laundry_desk/screens/v03_screens.dart';
+import 'package:laundry_desk/screens/v04_screens.dart';
 import 'package:laundry_desk/state/app_state.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -194,6 +209,67 @@ void main() {
     }
     s.setBranchFilter(null);
     log('branch totals ok');
+
+    // ---- open every screen (all branches, then one branch) ----
+    Future<void> visit(String name, Widget w) async {
+      final nav = t.state<NavigatorState>(find.byType(Navigator).first);
+      nav.push(MaterialPageRoute<void>(builder: (_) => w));
+      await pause(t, 1500);
+      final sc = find.byType(Scrollable);
+      if (sc.evaluate().isNotEmpty) {
+        try {
+          await t.drag(sc.last, const Offset(0, -700), warnIfMissed: false);
+        } catch (_) {}
+        await pause(t, 500);
+      }
+      nav.pop();
+      await pause(t, 400);
+      log('screen ok: $name');
+    }
+
+    final o1 = d.orders.firstWhere((o) => o.status == 'delivered');
+    final iss = d.issues.isEmpty ? null : d.issues.first;
+    final staff1 = d.staff.first;
+    Future<void> tour(String tag) async {
+      await visit('$tag dashboard', const Scaffold(body: DashboardScreen()));
+      await visit('$tag orders', const OrdersScreen());
+      await visit('$tag order detail', OrderDetailScreen(orderId: o1.id));
+      await visit('$tag edit order', EditOrderScreen(orderId: o1.id));
+      await visit('$tag new order', const NewOrderScreen());
+      await visit('$tag customers', const CustomersScreen());
+      await visit('$tag customer detail', CustomerDetailScreen(customerId: o1.customerId));
+      await visit('$tag staff', const StaffScreen());
+      await visit('$tag payslip', PayslipScreen(staffId: staff1.id, month: monthKey(DateTime.now())));
+      await visit('$tag rules', const RulesScreen());
+      await visit('$tag reports', const ReportsScreen());
+      await visit('$tag day close', const DayCloseScreen());
+      await visit('$tag late orders', const OverdueScreen());
+      await visit('$tag issues', const IssuesScreen());
+      await visit('$tag issue reports', const IssueReportsScreen());
+      if (iss != null) await visit('$tag issue detail', IssueDetailScreen(issueId: iss.id));
+      await visit('$tag complaint', ComplaintScreen(orderId: o1.id));
+      await visit('$tag wrong delivery', WrongDeliveryScreen(orderId: o1.id));
+      await visit('$tag delivery board', const DeliveryBoardScreen());
+      await visit('$tag route map', const RouteMapScreen());
+      await visit('$tag offers', const OffersScreen());
+      await visit('$tag stock', const StockScreen());
+      await visit('$tag booking qr', const BookingQrScreen());
+      await visit('$tag expenses', const ExpensesScreen());
+      await visit('$tag branches', const BranchesScreen());
+      await visit('$tag rate card', const RateCardScreen());
+      await visit('$tag plans', const PlansScreen());
+      await visit('$tag settings', const SettingsScreen());
+      await visit('$tag more', const MoreScreen());
+      await visit('$tag queue', const QueueScreen());
+    }
+
+    await tour('all');
+    s.setBranchFilter(d.branches[1].id);
+    await pause(t, 300);
+    await tour(d.branches[1].name);
+    s.setBranchFilter(null);
+    await pause(t, 300);
+    log('screen tour ok');
 
     // ---- staff login (manager Sunita 98200 11111 / 1111) ----
     await s.signOut();
