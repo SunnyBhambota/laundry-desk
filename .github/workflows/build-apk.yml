@@ -129,6 +129,7 @@ jobs:
           disable-animations: true
           disk-size: 3000M
           ram-size: 2048M
+          profile: pixel_5
           script: bash ci/e2e.sh
       - uses: actions/upload-artifact@v4
         if: always()

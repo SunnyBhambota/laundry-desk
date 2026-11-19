@@ -150,11 +150,13 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                 onPressed: app.signOut,
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
-              const Spacer(),
-              const LogoMark(size: 30),
-              const SizedBox(width: 8),
-              const Wordmark(size: 16),
-              const Spacer(),
+              const Expanded(
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  LogoMark(size: 30),
+                  SizedBox(width: 8),
+                  Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Wordmark(size: 16))),
+                ]),
+              ),
               const LangToggle(),
             ]),
             const SizedBox(height: 14),
@@ -210,11 +212,14 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: LD.line),
               ),
-              child: Column(children: [
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(children: [
                 sw(t('pickupOffer'), _pickup, (v) => _pickup = v),
                 sw(t('gst'), _gst, (v) => _gst = v),
                 sw(t('sampleOn'), _sample, (v) => _sample = v),
               ]),
+              ),
             ),
             const SizedBox(height: 14),
             GlassField(controller: _referral, hint: t('referral'), icon: Icons.card_giftcard_outlined, action: TextInputAction.done),
