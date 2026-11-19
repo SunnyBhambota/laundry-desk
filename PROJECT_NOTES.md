@@ -50,6 +50,13 @@
 - Google login: `AuthService.signInWithGoogle` (serverClientId = AppConfig.googleWebClientId); Google owners give mobile in Business setup. Needs Google provider ON in Firebase Auth.
 - Modules: `loyalty`, `stock` added (premium).
 
+## v0.5 (20 Nov 2026)
+- Owner: "login dobara nahi ho raha". Fixes: V.local() (+91/0 prefix), email login via `shopCodes/mail_<sha>` → {login}, Google owners add password (setup + Settings), `ShopData.flush()` before signOut, CloudSync.lastError shown in More.
+- `integration_test/app_test.dart` + `test_driver/` + `ci/e2e.sh`: CI job `e2e` (emulator, real Firebase) must pass before publish. `ci/prepare_android.sh` shared by jobs. Test account deleted at the end.
+- Multi-branch: `widgets/branch_switch.dart`, BranchCompareCard/BranchRow + DayCloseScreen + OverdueScreen (reports_screen.dart), ExportService.branchCsv, branch sheet (admin_screens), staff edit (staff_screen), order move, `ShopData.agentsFor`.
+- BookingQrScreen (v04_screens) + ExportService.bookingPosterPdf/bookingLink.
+- Owner rule (20 Nov): paid things (Play Store, iOS, WhatsApp API, OTP) STOP. Never wait for "allow" – everything is allowed.
+
 ## Owner ko bataya hua pending (order mein)
 v0.3: order edit/refund/customer delete, QR scan, Bluetooth printer, UPI QR on bill, VIP/business rates, backup/restore file, Hindi gaps.
 v0.4: loyalty/coupons/packages, background tracking, pickup slots + route + map, inventory/suppliers, Google login (OTP/reset need Blaze).

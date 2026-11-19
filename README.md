@@ -1,4 +1,4 @@
-# Laundry Desk – Android app (v0.4, testing build)
+# Laundry Desk – Android app (v0.5, testing build)
 
 Laundry shop management by **BrotriX Technologies**. Flutter (Android first, iOS later from the same code).
 
@@ -12,6 +12,14 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
 - Har `main` push par GitHub Actions APK banata hai, emulator par khol kar check karta hai, phir **Releases** mein daalta hai.
   App khulte hi band ho jaye to release nahi banta.
 - Pehli baar Android "unknown apps" ki permission maangega: Chrome ko allow karo.
+
+## v0.5 (20 Nov 2026)
+- Login fix: mobile +91/0 ke saath bhi chalega, email se login, Google owner ka password, logout se pehle cloud save, More mein cloud status.
+- Har screen par branch chooser; Branch comparison (table + Excel/CSV + PDF); Day closing (cash book); Late orders; Last month / dates choose.
+- Branch edit (naam, pata, phone – bill par), order dusri branch mein bhejna, staff branch/role/salary/PIN badalna.
+- Settings → Security: password badalna, Google jodna (password bhoolne par wapas aane ke liye).
+- Customer booking QR (WhatsApp, free) + A4 poster.
+- Har release se pehle emulator par real Firebase ke saath poora test (signup, re-login, staff login, branch totals).
 
 ## v0.4 (19 Nov 2026)
 - Offers: coupon codes (DIWALI10 type), loyalty points (delivery par milte hain, bill par use), monthly packages (Family 30 kg type) – More → Offers.
