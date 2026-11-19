@@ -38,6 +38,9 @@ class CloudSync {
   bool _again = false;
   bool _applying = false;
 
+  /// true while changes are being sent.
+  bool get busy => _pushing;
+
   /// Shown in More → Cloud: last good sync and last problem.
   DateTime? lastOk;
   String lastError = '';
@@ -325,7 +328,10 @@ class CloudSync {
     if (writes.isEmpty && keys == null) return;
 
     // Settings + counter first (small, and other phones need them to open the shop).
-    final entries = writes.entries.toList()..sort((a, b) => (a.key.startsWith('meta/') ? 0 : 1).compareTo(b.key.startsWith('meta/') ? 0 : 1));
+    final entries = [
+      ...writes.entries.where((e) => e.key.startsWith('meta/')),
+      ...writes.entries.where((e) => !e.key.startsWith('meta/')),
+    ];
     final failed = <String>[];
     for (var i = 0; i < entries.length; i += 400) {
       final chunk = entries.skip(i).take(400).toList();

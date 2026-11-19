@@ -205,15 +205,11 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
             ],
             GlassField(controller: _address, hint: t('address'), icon: Icons.place_outlined),
             const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .6),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: LD.line),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
+            Material(
+              color: Colors.white.withValues(alpha: .6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: LD.line)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 child: Column(children: [
                 sw(t('pickupOffer'), _pickup, (v) => _pickup = v),
                 sw(t('gst'), _gst, (v) => _gst = v),

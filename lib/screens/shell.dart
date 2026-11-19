@@ -87,11 +87,11 @@ class _ShellState extends State<Shell> {
             child: InkWell(
               onTap: () => setState(() => _tab = i),
               child: SizedBox(
-                height: 72,
+                height: 76,
                 child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
                       color: LD.primary,
                       borderRadius: BorderRadius.circular(18),
@@ -101,7 +101,7 @@ class _ShellState extends State<Shell> {
                   ),
                   const SizedBox(height: 3),
                   Text(tab.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                 ]),
               ),
             ),

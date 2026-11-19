@@ -120,21 +120,33 @@ void main() {
     final code = d0.shopCode;
     log('setup ok: $orders orders, code $code');
 
-    // cloud copy must match what the phone has
+    // cloud copy must match what the phone has (every collection)
     final shopRef = FirebaseFirestore.instance.collection('shops').doc(uid);
-    var cloudOrders = 0;
-    final cloudEnd = DateTime.now().add(const Duration(seconds: 120));
-    while (DateTime.now().isBefore(cloudEnd)) {
-      await pause(t, 3000);
-      cloudOrders = (await shopRef.collection('orders').get(const GetOptions(source: Source.server))).size;
-      if (cloudOrders == orders) break;
+    await wait(t, () => d0.sync != null && !d0.sync!.busy, 'first upload finished', secs: 180);
+    await pause(t, 3000);
+    await wait(t, () => !d0.sync!.busy, 'upload idle', secs: 180);
+    log('sync error: "${d0.sync?.lastError}"');
+    expect(d0.sync!.lastError, isEmpty);
+    final local = <String, int>{
+      'orders': d0.orders.length,
+      'customers': d0.customers.length,
+      'branches': d0.branches.length,
+      'staff': d0.staff.length,
+      'expenses': d0.expenses.length,
+      'issues': d0.issues.length,
+      'payouts': d0.payouts.length,
+      'coupons': d0.coupons.length,
+      'packagePlans': d0.packagePlans.length,
+      'stock': d0.stock.length,
+      'suppliers': d0.suppliers.length,
+      'garments': d0.garments.length,
+      'pings': d0.pings.length,
+    };
+    for (final e in local.entries) {
+      final n = (await shopRef.collection(e.key).get(const GetOptions(source: Source.server))).size;
+      log('cloud ${e.key}: $n / ${e.value}');
+      expect(n, e.value, reason: '${e.key} in cloud');
     }
-    log('cloud orders $cloudOrders / $orders · sync error: "${d0.sync?.lastError}"');
-    for (final col in ['branches', 'customers', 'staff', 'activity', 'attendance', 'expenses', 'issues', 'payouts', 'pings', 'meta', 'garments', 'coupons', 'stock']) {
-      final n = (await shopRef.collection(col).get(const GetOptions(source: Source.server))).size;
-      log('cloud $col: $n');
-    }
-    expect(cloudOrders, orders, reason: 'all orders reached the cloud');
     expect((await shopRef.collection('meta').doc('settings').get(const GetOptions(source: Source.server))).exists, isTrue);
 
     // ---- log out, wipe this phone, log in with mobile typed as +91 … ----
@@ -149,6 +161,11 @@ void main() {
     await wait(t, () => s.data!.orders.length == orders, 'orders back after re-login');
     expect(s.data!.customers.length, customers);
     expect(s.data!.shopCode, code);
+    expect(s.data!.branches.length, local['branches']);
+    expect(s.data!.staff.length, local['staff']);
+    expect(s.data!.issues.length, local['issues']);
+    expect(s.data!.coupons.length, local['coupons']);
+    expect(s.data!.stock.length, local['stock']);
     log('re-login with mobile ok');
 
     // ---- log out, log in with email ----
