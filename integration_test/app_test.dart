@@ -21,6 +21,7 @@ import 'package:laundry_desk/screens/dashboard_screen.dart';
 import 'package:laundry_desk/screens/delivery_screen.dart';
 import 'package:laundry_desk/screens/issue_screens.dart';
 import 'package:laundry_desk/screens/live_map_screen.dart';
+import 'package:laundry_desk/screens/lock_screen.dart';
 import 'package:laundry_desk/screens/more_screen.dart';
 import 'package:laundry_desk/screens/new_order_screen.dart';
 import 'package:laundry_desk/screens/order_detail_screen.dart';
@@ -272,6 +273,22 @@ void main() {
     s.setBranchFilter(null);
     await pause(t, 300);
     log('screen tour ok');
+
+    // ---- app lock shows above any open screen ----
+    s.setLockPin('1234');
+    final nav0 = t.state<NavigatorState>(find.byType(Navigator).first);
+    nav0.push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    await pause(t, 800);
+    s.lockNow();
+    await pause(t, 800);
+    expect(find.byType(LockScreen), findsOneWidget);
+    expect(s.unlock('1234'), isTrue);
+    await pause(t, 600);
+    expect(find.byType(LockScreen), findsNothing);
+    nav0.pop();
+    s.setLockPin(null);
+    await pause(t, 400);
+    log('app lock ok');
 
     // ---- staff login (manager Sunita 98200 11111 / 1111) ----
     await s.signOut();

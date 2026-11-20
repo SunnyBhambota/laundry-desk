@@ -29,6 +29,16 @@ class LaundryDeskApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       home: const AuthGate(),
+      // The app lock sits above every screen (also above Settings / order pages that were open).
+      builder: (context, child) => Consumer<AppState>(
+        builder: (context, s, _) => Stack(children: [
+          if (child != null) child,
+          if (s.signedIn && s.setupDone && s.locked)
+            Positioned.fill(
+              child: Navigator(onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const LockScreen())),
+            ),
+        ]),
+      ),
     );
   }
 }
@@ -72,7 +82,6 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     final s = context.watch<AppState>();
     if (!s.signedIn) return const AuthScreen();
     if (!s.setupDone) return const BusinessSetupScreen();
-    if (s.locked) return const LockScreen();
     return const Shell();
   }
 }
