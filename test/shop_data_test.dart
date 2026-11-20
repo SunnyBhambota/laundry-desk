@@ -472,5 +472,53 @@ void main() {
     final pdf = await ExportService.statementPdf(shop: shop, data: d, c: a, from: DateTime(n.year, n.month, 1), to: DateTime(n.year, n.month + 1, 1));
     expect(pdf.length, greaterThan(1000));
   });
+
+  test('v0.10: loans, shifts, meters, machines, insights, GST', () async {
+    final d = ShopData('local_v10');
+    final shop = _shop();
+    await d.initialise(shop);
+    SampleData.fill(d, services: shop.services);
+    final l = Loan(id: 'x', staffId: 's', amount: 2500, monthly: 1000, start: '2026-01', at: DateTime(2026));
+    expect(l.cutIn('2025-12'), 0);
+    expect(l.cutIn('2026-01'), 1000);
+    expect(l.cutIn('2026-03'), 500);
+    expect(l.cutIn('2026-04'), 0);
+    expect(l.leftAfter('2026-02'), 500);
+    expect(l.leftAfter('2027-01'), 0);
+    final ravi = d.staff.firstWhere((x) => x.id == 'demo_s3');
+    final n = DateTime.now();
+    final r = d.shiftReport(ravi, monthKey(n));
+    expect(r.days, greaterThanOrEqualTo(0));
+    final ps = buildPayslip(s: ravi, month: monthKey(n), orders: d.orders, activity: d.activity, attendance: d.attendance, issues: d.issues, payouts: d.payouts, rules: d.rules, loans: d.loans, notes: d.staffNotes);
+    expect(ps.lines.any((x) => x.label == 'Loan installment' && x.amount == -1000), isTrue);
+    final arjun = d.staff.firstWhere((x) => x.id == 'demo_s4');
+    final pa = buildPayslip(s: arjun, month: monthKey(d.staffNotes.firstWhere((x) => x.id == 'demo_sn1').at), orders: d.orders, activity: d.activity, attendance: d.attendance, issues: d.issues, payouts: d.payouts, rules: d.rules, notes: d.staffNotes);
+    expect(pa.lines.any((x) => x.label.startsWith('Fine') && x.amount == -100), isTrue);
+    final main = d.branches.first.id;
+    expect(d.meterUsed('electricity', main, n.subtract(const Duration(days: 30)), n.add(const Duration(days: 1))), closeTo(385, .01));
+    expect(d.machinesDue.map((m) => m.id), contains('demo_mc1'));
+    d.reportFault(d.machines[1], by: 'demo_s3', branchId: main, note: 'noise');
+    expect(d.machinesDue.map((m) => m.id), contains('demo_mc2'));
+    d.serviceMachine(d.machines.first, by: 'owner', cost: 800);
+    expect(d.machines.first.serviceDue, isFalse);
+    final from = DateTime(2000), to = n.add(const Duration(days: 1));
+    final sv = d.serviceRevenue(from, to);
+    final total = sv.values.fold<double>(0, (s, v) => s + v.$1);
+    final taxable = d.orders.where((o) => o.status != 'cancelled').fold<double>(0, (s, o) => s + o.taxable);
+    expect(total, closeTo(taxable, 1));
+    expect(d.monthlySales(6).length, 6);
+    final busy = d.busyTimes(from, to);
+    expect(busy.$1.fold<int>(0, (a, b) => a + b), d.orders.length);
+    final ds = d.deliveryStats('demo_s4', from, to);
+    expect(ds.drops, greaterThanOrEqualTo(0));
+    d.taxPct = 18;
+    final csv = ExportService.gstCsv(d, from, to).split('\n');
+    expect(csv.first, startsWith('Date'));
+    expect(Machine.fromJson(d.machines.first.toJson()).name, d.machines.first.name);
+    expect(Loan.fromJson(d.loans.first.toJson()).monthly, 1000);
+    d.clearSample();
+    expect(d.machines, isEmpty);
+    expect(d.loans, isEmpty);
+  });
 }
 

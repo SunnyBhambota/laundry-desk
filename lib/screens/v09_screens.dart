@@ -502,9 +502,9 @@ class _PieceScanScreenState extends State<PieceScanScreen> {
   }
 }
 
-// ======================= BrotriX admin: all shops' plans =======================
+// ======================= app admin: all shops' plans =======================
 
-Future<void> openBrotrixAdmin(BuildContext context) async {
+Future<void> openAppAdmin(BuildContext context) async {
   final app = context.read<AppState>();
   final ok = await LicenseService.instance.isAdmin();
   if (!context.mounted) return;
@@ -516,9 +516,9 @@ Future<void> openBrotrixAdmin(BuildContext context) async {
   showDialog<void>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('BrotriX admin'),
+      title: const Text('App admin'),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(L(app, 'This account is not a BrotriX admin. To make it one (one time):', 'ये अकाउंट BrotriX एडमिन नहीं है। एडमिन बनाने के लिए (एक बार):')),
+        Text(L(app, 'This account is not the app admin. To make it admin (one time):', 'ये अकाउंट ऐप एडमिन नहीं है। एडमिन बनाने के लिए (एक बार):')),
         const SizedBox(height: 8),
         const Text('Firebase → Firestore → + Start collection → "admins" → Document ID = this ID → Save'),
         const SizedBox(height: 8),
@@ -572,7 +572,7 @@ class _AdminLicensesScreenState extends State<AdminLicensesScreen> {
     final l = (_list ?? []).where((x) => _q.isEmpty || '${x.$2['shopName']} ${x.$2['phone']} ${x.$2['code']}'.toLowerCase().contains(_q)).toList();
     final paid = (_list ?? []).where((x) => x.$2['plan'] == 'pro' || x.$2['plan'] == 'business').length;
     return Scaffold(
-      appBar: AppBar(title: Text('BrotriX · ${L(app, 'all shops', 'सभी दुकानें')}'), actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))]),
+      appBar: AppBar(title: Text(L(app, 'All shops', 'सभी दुकानें')), actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh))]),
       body: _list == null
           ? Center(child: _err.isEmpty ? const CircularProgressIndicator() : Padding(padding: const EdgeInsets.all(20), child: Text(_err)))
           : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [

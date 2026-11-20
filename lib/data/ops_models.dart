@@ -37,6 +37,7 @@ const expenseCategories = [
   'Fuel & transport',
   'Packaging',
   'Stock purchase',
+  'Repairs',
   'Other',
 ];
 
@@ -421,6 +422,143 @@ class CashDay {
       );
 }
 
+/// Washing machine / dryer / steam press: service dates and breakdowns.
+class Machine {
+  Machine({required this.id, required this.name, this.branchId = '', this.kind = 'Washer', this.everyDays = 90, this.lastService, this.status = 'ok', this.note = ''});
+  final String id;
+  String name;
+  String branchId;
+  String kind; // Washer | Dryer | Steam press | Boiler | Other
+  int everyDays; // service every N days
+  DateTime? lastService;
+  String status; // ok | broken
+  String note;
+  DateTime? get nextService => lastService?.add(Duration(days: everyDays));
+  bool get serviceDue => nextService != null && !nextService!.isAfter(DateTime.now().add(const Duration(days: 3)));
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'branchId': branchId,
+        'kind': kind,
+        'everyDays': everyDays,
+        'lastService': lastService?.toIso8601String(),
+        'status': status,
+        'note': note,
+      };
+  factory Machine.fromJson(Map<String, dynamic> j) => Machine(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        branchId: j['branchId'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'Washer',
+        everyDays: (j['everyDays'] as num?)?.toInt() ?? 90,
+        lastService: DateTime.tryParse(j['lastService'] as String? ?? ''),
+        status: j['status'] as String? ?? 'ok',
+        note: j['note'] as String? ?? '',
+      );
+}
+
+/// Electricity / water / gas meter reading.
+class MeterReading {
+  MeterReading({required this.id, required this.kind, required this.branchId, required this.value, required this.at, this.by = ''});
+  final String id;
+  final String kind; // electricity | water | gas
+  final String branchId;
+  final double value;
+  final DateTime at;
+  final String by;
+  Map<String, dynamic> toJson() => {'id': id, 'kind': kind, 'branchId': branchId, 'value': value, 'at': at.toIso8601String(), 'by': by};
+  factory MeterReading.fromJson(Map<String, dynamic> j) => MeterReading(
+        id: j['id'] as String,
+        kind: j['kind'] as String? ?? 'electricity',
+        branchId: j['branchId'] as String? ?? '',
+        value: (j['value'] as num?)?.toDouble() ?? 0,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        by: j['by'] as String? ?? '',
+      );
+}
+
+/// Mistake / praise written by the owner about a staff member (fine goes to the payslip).
+class StaffNote {
+  StaffNote({required this.id, required this.staffId, required this.kind, required this.text, required this.at, this.by = '', this.fine = 0});
+  final String id;
+  final String staffId;
+  final String kind; // mistake | praise
+  final String text;
+  final DateTime at;
+  final String by;
+  final double fine;
+  Map<String, dynamic> toJson() => {'id': id, 'staffId': staffId, 'kind': kind, 'text': text, 'at': at.toIso8601String(), 'by': by, 'fine': fine};
+  factory StaffNote.fromJson(Map<String, dynamic> j) => StaffNote(
+        id: j['id'] as String,
+        staffId: j['staffId'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'mistake',
+        text: j['text'] as String? ?? '',
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        by: j['by'] as String? ?? '',
+        fine: (j['fine'] as num?)?.toDouble() ?? 0,
+      );
+}
+
+/// Loan to a staff member, cut from salary every month.
+class Loan {
+  Loan({required this.id, required this.staffId, required this.amount, required this.monthly, required this.start, required this.at, this.note = ''});
+  final String id;
+  final String staffId;
+  final double amount;
+  final double monthly;
+  final String start; // first month cut, yyyy-mm
+  final DateTime at;
+  final String note;
+
+  /// Amount cut in [month] (yyyy-mm): monthly, until the loan is paid off.
+  double cutIn(String month) {
+    if (month.compareTo(start) < 0 || monthly <= 0) return 0;
+    var y = int.parse(start.substring(0, 4)), m = int.parse(start.substring(5, 7));
+    var left = amount;
+    while (true) {
+      final key = '$y-${m.toString().padLeft(2, '0')}';
+      final cut = left < monthly ? left : monthly;
+      if (key == month) return cut < 0 ? 0 : cut;
+      left -= cut;
+      if (left <= 0) return 0;
+      m++;
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
+    }
+  }
+
+  /// Still to be cut after [month].
+  double leftAfter(String month) {
+    if (month.compareTo(start) < 0) return amount;
+    var y = int.parse(start.substring(0, 4)), m = int.parse(start.substring(5, 7));
+    var left = amount;
+    while (left > 0) {
+      final key = '$y-${m.toString().padLeft(2, '0')}';
+      left -= left < monthly ? left : monthly;
+      if (key == month) break;
+      m++;
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
+    }
+    return left < 0 ? 0 : left;
+  }
+
+  Map<String, dynamic> toJson() => {'id': id, 'staffId': staffId, 'amount': amount, 'monthly': monthly, 'start': start, 'at': at.toIso8601String(), 'note': note};
+  factory Loan.fromJson(Map<String, dynamic> j) => Loan(
+        id: j['id'] as String,
+        staffId: j['staffId'] as String? ?? '',
+        amount: (j['amount'] as num?)?.toDouble() ?? 0,
+        monthly: (j['monthly'] as num?)?.toDouble() ?? 0,
+        start: j['start'] as String? ?? '',
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        note: j['note'] as String? ?? '',
+      );
+}
+
 /// Staff writes "used 2 kg powder"; the owner's phone books it into stock once.
 class StockUse {
   StockUse({required this.id, required this.by, required this.itemId, required this.qty, required this.at, this.branchId = '', this.note = ''});
@@ -742,8 +880,10 @@ class Staff {
     this.shiftStart = '',
     this.shiftEnd = '',
     Map<String, bool>? perms,
+    Map<String, bool>? training,
   })  : skills = skills ?? [],
-        perms = perms ?? {};
+        perms = perms ?? {},
+        training = training ?? {};
   final String id;
   String name;
   String phone;
@@ -753,6 +893,7 @@ class Staff {
   String shiftStart; // "09:30"
   String shiftEnd;
   Map<String, bool> perms; // extra yes/no rights set by the owner (discount, refund, …)
+  Map<String, bool> training; // training checklist item → done
   String pinHash; // sha256("<shopCode>:<last 10 digits of phone>:<pin>"), see staffKey()
   double salary;
   bool active;
@@ -776,6 +917,7 @@ class Staff {
         if (shiftStart.isNotEmpty) 'shiftStart': shiftStart,
         if (shiftEnd.isNotEmpty) 'shiftEnd': shiftEnd,
         if (perms.isNotEmpty) 'perms': perms,
+        if (training.isNotEmpty) 'training': training,
       };
   factory Staff.fromJson(Map<String, dynamic> j) => Staff(
         id: j['id'] as String,
@@ -790,6 +932,7 @@ class Staff {
         shiftStart: j['shiftStart'] as String? ?? '',
         shiftEnd: j['shiftEnd'] as String? ?? '',
         perms: ((j['perms'] as Map?) ?? {}).map((k, v) => MapEntry('$k', v == true)),
+        training: ((j['training'] as Map?) ?? {}).map((k, v) => MapEntry('$k', v == true)),
       );
 }
 

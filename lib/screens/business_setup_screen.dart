@@ -234,7 +234,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
             const SizedBox(height: 8),
             Text(t('trialNote'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: LD.slate)),
             const SizedBox(height: 18),
-            const BrotrixFooter(),
+            const DesignerFooter(),
           ]),
         ),
       ),

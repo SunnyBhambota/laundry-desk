@@ -24,8 +24,8 @@ class CloudSync {
   /// false for staff: they may not write settings, staff, branches, rates or expenses.
   bool admin = true;
 
-  static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts', 'coupons', 'packagePlans', 'stock', 'stockMoves', 'suppliers'};
-  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'requests', 'stockUses', 'notices', 'cashDays'};
+  static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts', 'coupons', 'packagePlans', 'stock', 'stockMoves', 'suppliers', 'machines', 'staffNotes', 'loans'};
+  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'requests', 'stockUses', 'notices', 'cashDays', 'readings'};
   static const allCols = [...adminCols, ...memberCols];
 
   FirebaseFirestore get _fs => FirebaseFirestore.instance;
@@ -120,6 +120,18 @@ class CloudSync {
     for (final x in d.cashDays) {
       m['cashDays/${x.id}'] = x.toJson();
     }
+    for (final x in d.machines) {
+      m['machines/${x.id}'] = x.toJson();
+    }
+    for (final x in d.readings) {
+      m['readings/${x.id}'] = x.toJson();
+    }
+    for (final x in d.staffNotes) {
+      m['staffNotes/${x.id}'] = x.toJson();
+    }
+    for (final x in d.loans) {
+      m['loans/${x.id}'] = x.toJson();
+    }
     d.pings.forEach((k, v) => m['pings/$k'] = {'list': v.map((p) => p.toJson()).toList()});
     m['meta/settings'] = d.settingsJson();
     m['meta/counter'] = {'nextNumber': d.nextNumber};
@@ -185,6 +197,14 @@ class CloudSync {
         put<Notice>(d.notices, Notice.fromJson, (x) => x.id == id);
       case 'cashDays':
         put<CashDay>(d.cashDays, CashDay.fromJson, (x) => x.id == id);
+      case 'machines':
+        put<Machine>(d.machines, Machine.fromJson, (x) => x.id == id);
+      case 'readings':
+        put<MeterReading>(d.readings, MeterReading.fromJson, (x) => x.id == id);
+      case 'staffNotes':
+        put<StaffNote>(d.staffNotes, StaffNote.fromJson, (x) => x.id == id);
+      case 'loans':
+        put<Loan>(d.loans, Loan.fromJson, (x) => x.id == id);
       case 'pings':
         if (j == null) {
           d.pings.remove(id);
@@ -270,6 +290,14 @@ class CloudSync {
         d.notices.clear();
       case 'cashDays':
         d.cashDays.clear();
+      case 'machines':
+        d.machines.clear();
+      case 'readings':
+        d.readings.clear();
+      case 'staffNotes':
+        d.staffNotes.clear();
+      case 'loans':
+        d.loans.clear();
     }
   }
 

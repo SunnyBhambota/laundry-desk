@@ -1,6 +1,7 @@
 # Laundry Desk – Project notes (Claude ke liye handoff)
 
 ## Owner ki zaroori baatein
+- (20 Nov 23:57) App mein KAHIN BHI 'BrotriX' naam nahi. Credit: 'Designed by SUNNY BHAMBOTA' (AppConfig.designer). Package id com.brotrix.laundry andar ka hai (Firebase se juda) – user ko nahi dikhta, mat badlo.
 - Git rule (20 Nov raat): push se pehle repo visibility check karo (`gh api repos/SunnyBhambota/laundry-desk -q .visibility`). PUBLIC = seedha push karte raho. PRIVATE = owner se poochho, permission ke baad hi push.
 - HAR release ke saath install QR file (laundry-desk-install-qr.png / docs/install-qr.png) SendUserFile se bhejna – owner ka rule.
 - App naam ab LaundryCase (logo owner ka, 20 Nov). Package id com.brotrix.laundry same.
@@ -11,9 +12,9 @@
 - Owner kuch install nahi karega. Code GitHub par (`SunnyBhambota/laundry-desk`, private), APK GitHub Actions se, QR README mein.
 - **Payday Budget Book (`SunnyBhambota/payday-budget-book`) bilkul alag app hai** — uski repo mein Laundry ka kuch nahi jaana chahiye, aur ulta bhi.
 - Version-wise: v0.1, v0.2 …  Budget kam: free tools pehle (Firebase free, GitHub free, owner ki Hostinger hosting).
-- Company: BrotriX Technologies ("Designed by BrotriX Technologies" login par). Play Store BrotriX org account se.
-- Business model: owner (BrotriX) ye app laundry shop owners ko bechega. Free + Premium modules, subscription (Monthly / 6 Months / 1 Year).
-  BrotriX modules tick karke on/off karega.
+- Credit: "Designed by SUNNY BHAMBOTA" (login + PDFs). No company name anywhere.
+- Business model: owner (owner (Sunny)) ye app laundry shop owners ko bechega. Free + Premium modules, subscription (Monthly / 6 Months / 1 Year).
+  owner (Sunny) modules tick karke on/off karega.
 
 ## Design (canvas: "Laundry Desk v0.1 – Logo, Colours, Sign up & Admin Dashboard")
 - Logo A "Drum Door" (abhi use ho raha; owner ne final nahi bola). Colours: Primary #1F5FD1, Navy #0F2340, Aqua #3CC6D8, Sun #FFC845, Mist #F4F8FC.
@@ -31,7 +32,7 @@
 - Delivery board + delivery person "My tasks" + washer "Work queue".
 - Reports (today/7d/month/all, branch filter): collection, sales, orders, avg, expenses, profit, dues, by mode, daily bars,
   service mix, top customers, branches, expenses by type, WhatsApp summary. Expenses, Branches, Settings (GST, express %, due days, shop code).
-- Plans & modules + BrotriX admin (version 7 tap, PIN 2468). Sample data (ids `demo_`), clear.
+- Plans & modules + app admin (version 7 tap, PIN 2468). Sample data (ids `demo_`), clear.
 - Print/export: `services/export_service.dart` (pdf + printing + share_plus): roll80 bill, A5 bill, QR tags A4, report PDF, CSV.
 - Security: owner app-lock PIN (`AppState.lockHash`, lock after 30 s background), roles, PIN for staff.
 - Tracking: `services/tracking_service.dart` (geolocator) — delivery staff GPS every 2 min on duty + proof at handover; `ShopData.pings`; board trail sheet + Maps route.

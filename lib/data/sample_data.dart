@@ -309,6 +309,26 @@ class SampleData {
       Notice(id: 'demo_nt2', text: 'New rate for curtains from 1st. Check the rate card.', by: 'owner', at: now.subtract(const Duration(days: 2)), readBy: ['demo_s1', 'demo_s2', 'demo_s3']),
     ]);
     d.cashDays.add(CashDay(id: '${main}_${dayKey(now)}', branchId: main, day: dayKey(now), opening: 2000, openedBy: 'demo_s1', openedAt: DateTime(now.year, now.month, now.day, 9, 15)));
+    // v0.10: machines, meters, shifts, notes, loan, training
+    d.machines.addAll([
+      Machine(id: 'demo_mc1', name: 'LG 10 kg front load', branchId: main, kind: 'Washer', everyDays: 90, lastService: now.subtract(const Duration(days: 88))),
+      Machine(id: 'demo_mc2', name: 'IFB dryer', branchId: main, kind: 'Dryer', everyDays: 120, lastService: now.subtract(const Duration(days: 30))),
+      Machine(id: 'demo_mc3', name: 'Steam press 1', branchId: main, kind: 'Steam press', everyDays: 60, lastService: now.subtract(const Duration(days: 20))),
+    ]);
+    for (var i = 10; i >= 0; i--) {
+      d.readings.add(MeterReading(id: 'demo_mr$i', kind: 'electricity', branchId: main, value: 12000 + (10 - i) * 38.5, at: DateTime(now.year, now.month, now.day, 9).subtract(Duration(days: i)), by: 'demo_s1'));
+    }
+    for (final st in d.staff.where((x) => x.id.startsWith('demo_'))) {
+      st
+        ..shiftStart = '09:30'
+        ..shiftEnd = '19:00';
+      st.training[d.trainingItems.first] = true;
+    }
+    d.staffNotes.addAll([
+      StaffNote(id: 'demo_sn1', staffId: 'demo_s4', kind: 'mistake', text: 'Gave order to wrong flat', at: now.subtract(const Duration(days: 3)), by: 'owner', fine: 100),
+      StaffNote(id: 'demo_sn2', staffId: 'demo_s3', kind: 'praise', text: 'Removed a tough wine stain', at: now.subtract(const Duration(days: 1)), by: 'owner'),
+    ]);
+    d.loans.add(Loan(id: 'demo_ln1', staffId: 'demo_s3', amount: 6000, monthly: 1000, start: monthKey(now), at: now.subtract(const Duration(days: 4)), note: 'Phone'));
     d.dailyTarget = 6000;
     d.dailyOrderTarget = 15;
     d.requests.addAll([

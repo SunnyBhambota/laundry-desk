@@ -1,6 +1,6 @@
 # Laundry Desk – Android app (v0.5, testing build)
 
-Laundry shop management by **BrotriX Technologies**. Flutter (Android first, iOS later from the same code).
+Laundry shop management app – **LaundryCase**, designed by **SUNNY BHAMBOTA**. Flutter (Android first, iOS later from the same code).
 
 ## Phone par install (QR scan)
 <img src="docs/install-qr.png" width="200" alt="APK download QR">
@@ -62,7 +62,7 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
 3. **Staff login** (Login screen → "Staff login"): shop code (More → Shop settings), staff ka mobile, PIN.
    Sample staff PINs: Sunita (manager) 1111, Imran (counter) 2222, Ravi (washing) 3333, Arjun (delivery) 4444,
    Deepak (delivery) 5555, Neha (counter) 6666 — mobile 98200 11111 … 98200 66666.
-4. **BrotriX admin** (sirf owner): More → Version par 7 baar tap → PIN `0000` (`AppConfig.superAdminPin`, launch se pehle badlo).
+4. **App admin** (sirf aapka account): More → Version par 7 baar tap. Firestore mein `admins/{aapka uid}` doc banana hota hai (app ID dikhata hai).
    Yahan se is shop ke modules on/off aur plan set hote hain.
 
 ## Roles

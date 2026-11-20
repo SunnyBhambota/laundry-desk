@@ -7,7 +7,7 @@ service cloud.firestore {
     function memberDoc() { return get(/databases/$(database)/documents/members/$(request.auth.uid)).data; }
     // Staff phone: a "members" record whose PIN hash still matches the owner's staffKeys list
     // (removing a staff member or changing the PIN cuts access at once).
-    // BrotriX admin: a document admins/{uid} made by hand in the Firebase console
+    // App admin: a document admins/{uid} made by hand in the Firebase console
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -41,7 +41,7 @@ service cloud.firestore {
       }
     }
 
-    // BrotriX control: plan / expiry / modules of every shop. Owner reads, only BrotriX changes.
+    // App admin control: plan / expiry / modules of every shop. Owner reads, only admin changes.
     match /licenses/{uid} {
       allow get: if isOwner(uid) || isAdmin();
       allow list: if isAdmin();

@@ -61,6 +61,7 @@ class Payslip {
 }
 
 bool _inMonth(DateTime d, String month) => monthKey(d) == month;
+String dmyShort(DateTime d) => '${d.day}/${d.month}';
 
 Payslip buildPayslip({
   required Staff s,
@@ -71,6 +72,9 @@ Payslip buildPayslip({
   required List<Issue> issues,
   required List<Payout> payouts,
   required Map<String, dynamic> rules,
+  List<Loan> loans = const [],
+  List<StaffNote> notes = const [],
+  int leaveDays = 0,
 }) {
   final p = Payslip(s, month);
   for (final o in orders) {
@@ -153,5 +157,13 @@ Payslip buildPayslip({
   if (p.complaints + p.wrongs == 0 && ended) add('No-issue bonus', 'No complaint or wrong delivery', rule(rules, 'bonus.zeroIssue'));
   add('Penalty: complaints', '${p.complaints} × ${rs(rule(rules, 'penalty.complaint'))}', -p.complaints * rule(rules, 'penalty.complaint'));
   add('Penalty: wrong delivery', '${p.wrongs} × ${rs(rule(rules, 'penalty.wrong'))}', -p.wrongs * rule(rules, 'penalty.wrong'));
+  for (final n in notes.where((n) => n.staffId == s.id && n.fine > 0 && _inMonth(n.at, month))) {
+    add('Fine: ${n.text}', dmyShort(n.at), -n.fine);
+  }
+  for (final l in loans.where((l) => l.staffId == s.id)) {
+    final cut = l.cutIn(month);
+    if (cut > 0) add('Loan installment', '${rs(cut)} / month · left after this: ${rs(l.leftAfter(month))}', -cut);
+  }
+  if (leaveDays > 0) p.lines.add(PayLine('Approved leave', '$leaveDays day(s)', 0));
   return p;
 }

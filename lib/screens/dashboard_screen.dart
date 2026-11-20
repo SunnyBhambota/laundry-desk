@@ -21,6 +21,7 @@ import 'staff_screen.dart';
 import 'v03_screens.dart';
 import 'v06_screens.dart';
 import 'v08_screens.dart';
+import 'v10_screens.dart';
 
 /// Owner / manager / counter home (canvas: "Owner – Admin dashboard").
 class DashboardScreen extends StatelessWidget {
@@ -237,6 +238,29 @@ class DashboardScreen extends StatelessWidget {
                 );
               }),
               const TargetCard(),
+              BackupReminder(onBackup: () => shareBackup(app)),
+              if (app.canManage && d.machinesDue.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: const Color(0xFFFDE8E8),
+                    borderRadius: BorderRadius.circular(14),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      leading: const Icon(Icons.build_circle_outlined, color: Color(0xFFB42318)),
+                      title: Text('${L(app, 'Machines need attention', 'मशीनों पर ध्यान दें')}: ${d.machinesDue.map((m) => m.name).take(3).join(', ')}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB42318))),
+                      trailing: const Icon(Icons.chevron_right, color: Color(0xFFB42318)),
+                      onTap: () => go(const MachinesScreen()),
+                    ),
+                  ),
+                ),
+              if (d.sync != null && (d.sync!.lastError.contains('unavailable') || d.sync!.lastError.contains('network')))
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(L(app, '● Offline – work normally, everything is saved on the phone and goes to the cloud when internet is back.',
+                      '● ऑफ़लाइन – काम करते रहें, सब फ़ोन में सेव है और इंटरनेट आते ही क्लाउड में जाएगा।'), style: const TextStyle(color: Color(0xFF8A5A00), fontWeight: FontWeight.w600)),
+                ),
               if (!app.isOwner) const Padding(padding: EdgeInsets.only(top: 12), child: NoticeBanner()),
               if (app.canManage && d.pendingRequests.isNotEmpty)
                 Padding(

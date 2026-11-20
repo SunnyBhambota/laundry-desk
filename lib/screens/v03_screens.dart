@@ -18,6 +18,7 @@ import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 import 'v08_screens.dart';
+import 'v10_screens.dart';
 
 // ---------------- edit order + refund ----------------
 
@@ -525,12 +526,8 @@ class BackupCard extends StatelessWidget {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: () async {
-            final raw = const JsonEncoder.withIndent(' ').convert({'app': 'laundry-desk', 'shop': app.shop!.toJson(), 'data': d.toJson()});
-            final now = DateTime.now();
-            await Share.shareXFiles(
-              [XFile.fromData(Uint8List.fromList(utf8.encode(raw)), name: 'laundry-desk-backup-${dayKey(now)}.json', mimeType: 'application/json')],
-              subject: 'LaundryCase backup',
-            );
+            await shareBackup(app);
+            await markBackupDone();
           },
           icon: const Icon(Icons.download_outlined),
           label: Text(L(app, 'Save full backup file', 'पूरा बैकअप फ़ाइल में सेव')),
@@ -564,4 +561,16 @@ class BackupCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+
+/// Share the full backup file (WhatsApp / email / Drive…).
+Future<void> shareBackup(AppState app) async {
+  final d = app.data!;
+  final raw = const JsonEncoder.withIndent(' ').convert({'app': 'laundry-desk', 'shop': app.shop!.toJson(), 'data': d.toJson()});
+  final now = DateTime.now();
+  await Share.shareXFiles(
+    [XFile.fromData(Uint8List.fromList(utf8.encode(raw)), name: 'laundrycase-backup-${dayKey(now)}.json', mimeType: 'application/json')],
+    subject: 'LaundryCase backup ${dayKey(now)}',
+  );
 }

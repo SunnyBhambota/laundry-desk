@@ -20,6 +20,9 @@ Payslip slipFor(AppState app, Staff s, String month) {
     issues: d.issues,
     payouts: d.payouts,
     rules: d.rules,
+    loans: d.loans,
+    notes: d.staffNotes,
+    leaveDays: d.leaveDaysIn(s.id, month),
   );
 }
 

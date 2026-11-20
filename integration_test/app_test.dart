@@ -35,6 +35,7 @@ import 'package:laundry_desk/screens/v04_screens.dart';
 import 'package:laundry_desk/screens/v06_screens.dart';
 import 'package:laundry_desk/screens/v08_screens.dart';
 import 'package:laundry_desk/screens/v09_screens.dart';
+import 'package:laundry_desk/screens/v10_screens.dart';
 import 'package:laundry_desk/state/app_state.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -265,6 +266,10 @@ void main() {
       await visit('$tag notices', const NoticeBoardScreen());
       await visit('$tag audit', const AuditScreen());
       await visit('$tag customer groups', const CustomerGroupsScreen());
+      await visit('$tag machines', const MachinesScreen());
+      await visit('$tag meters', const MetersScreen());
+      await visit('$tag staff report', const StaffReportScreen());
+      await visit('$tag insights', const InsightsScreen());
       await visit('$tag booking qr', const BookingQrScreen());
       await visit('$tag expenses', const ExpensesScreen());
       await visit('$tag branches', const BranchesScreen());

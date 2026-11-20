@@ -178,7 +178,7 @@ const opsEn = <String, String>{
   'bizFeat': 'Everything in Pro · multi-branch · delivery app & tracking · priority support',
   'freeFeat': '150 orders/month · customers · bill PDF & WhatsApp · basic reports · 1 branch · 2 staff',
   'moduleOff': 'This module is switched off for your shop.',
-  'superAdmin': 'BrotriX admin',
+  'superAdmin': 'App admin',
   'superPin': 'Admin PIN',
   'superSub': 'Switch modules on/off for this shop and set its plan.',
   // settings
@@ -396,7 +396,7 @@ const opsHi = <String, String>{
   'bizFeat': 'प्रो का सब कुछ · मल्टी-ब्रांच · डिलीवरी ऐप और ट्रैकिंग · प्राथमिकता सपोर्ट',
   'freeFeat': 'महीने में 150 ऑर्डर · ग्राहक · बिल PDF और WhatsApp · बेसिक रिपोर्ट · 1 ब्रांच · 2 स्टाफ़',
   'moduleOff': 'यह मॉड्यूल आपकी दुकान के लिए बंद है।',
-  'superAdmin': 'BrotriX एडमिन',
+  'superAdmin': 'ऐप एडमिन',
   'superPin': 'एडमिन PIN',
   'superSub': 'इस दुकान के मॉड्यूल चालू/बंद करें और प्लान सेट करें।',
   'settings': 'दुकान की सेटिंग',

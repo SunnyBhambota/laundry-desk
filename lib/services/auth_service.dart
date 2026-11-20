@@ -47,6 +47,10 @@ class AuthService {
           storageBucket: AppConfig.firebaseStorageBucket.isEmpty ? null : AppConfig.firebaseStorageBucket,
         ),
       );
+      // work without internet: keep everything on the phone, send when back online
+      try {
+        FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+      } catch (_) {}
       _cloud = true;
     } catch (_) {
       _cloud = false;

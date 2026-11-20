@@ -32,7 +32,11 @@ class LaundryDeskApp extends StatelessWidget {
       // The app lock sits above every screen (also above Settings / order pages that were open).
       builder: (context, child) => Consumer<AppState>(
         builder: (context, s, _) => Stack(children: [
-          if (child != null) child,
+          if (child != null)
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
+              child: child,
+            ),
           if (s.signedIn && s.setupDone && s.locked)
             Positioned.fill(
               // own hero scope: sharing the app's HeroController breaks page "back" after unlocking

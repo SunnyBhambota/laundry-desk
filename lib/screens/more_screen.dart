@@ -20,6 +20,7 @@ import 'reports_screen.dart';
 import 'v06_screens.dart';
 import 'v08_screens.dart';
 import 'v09_screens.dart';
+import 'v10_screens.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -126,6 +127,12 @@ class _MoreScreenState extends State<MoreScreen> {
             if (app.canManage) tile(Icons.engineering_outlined, L(app, 'Work board (who does what)', 'काम बोर्ड (कौन क्या कर रहा)'), () => go(const WorkBoardScreen())),
             if (app.canManage) tile(Icons.manage_search_rounded, L(app, 'Who changed what', 'किसने क्या बदला'), () => go(const AuditScreen())),
             if (app.isOwner) tile(Icons.flag_outlined, L(app, 'Daily target', 'रोज़ का टारगेट'), () => targetSheet(context, app)),
+            if (app.canManage) tile(Icons.query_stats_rounded, L(app, 'Business insights (graphs, GST, lost customers)', 'बिज़नेस की समझ (ग्राफ़, GST, छूटे ग्राहक)'), () => go(const InsightsScreen())),
+            if (app.canManage) tile(Icons.badge_outlined, L(app, 'Staff report (late, leave, mistakes, loan)', 'स्टाफ रिपोर्ट (लेट, छुट्टी, गलती, लोन)'), () => go(const StaffReportScreen())),
+            tile(Icons.local_laundry_service_outlined, L(app, 'Machines', 'मशीनें'), () => go(const MachinesScreen()),
+                sub: d.machinesDue.isEmpty ? null : '${d.machinesDue.length} ${L(app, 'need attention', 'ध्यान चाहिए')}'),
+            if (app.role != Role.delivery) tile(Icons.speed_outlined, L(app, 'Meter readings (light, water, gas)', 'मीटर रीडिंग (बिजली, पानी, गैस)'), () => go(const MetersScreen())),
+            tile(Icons.text_increase_rounded, L(app, 'Text size', 'अक्षर का साइज़'), () => textSizeSheet(context, app), sub: app.textScale == 1 ? L(app, 'Normal', 'सामान्य') : '${(app.textScale * 100).round()}%'),
             tile(Icons.inbox_outlined, app.canManage ? L(app, 'Staff requests & leave', 'स्टाफ की माँग और छुट्टी') : L(app, 'Ask the boss (things / leave)', 'बॉस से माँगें (चीज़ / छुट्टी)'),
                 () => go(const RequestsScreen()),
                 sub: app.canManage && d.pendingRequests.isNotEmpty ? '${d.pendingRequests.length} ${L(app, 'waiting', 'इंतज़ार में')}' : null),
@@ -153,7 +160,7 @@ class _MoreScreenState extends State<MoreScreen> {
                     _taps++;
                     if (_taps >= 7) {
                       _taps = 0;
-                      openBrotrixAdmin(context);
+                      openAppAdmin(context);
                     }
                   }
                 : null,
@@ -165,7 +172,7 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
         ]),
         const SizedBox(height: 10),
-        const BrotrixFooter(),
+        const DesignerFooter(),
       ]),
     );
   }

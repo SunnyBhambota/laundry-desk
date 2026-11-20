@@ -487,10 +487,10 @@ class PlansScreen extends StatelessWidget {
             const SizedBox(height: 12),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: LD.sun, foregroundColor: LD.navy, minimumSize: const Size.fromHeight(46)),
-              onPressed: () => AppConfig.brotrixPhone.isEmpty
-                  ? toast(context, L(app, 'Call / WhatsApp BrotriX Technologies to activate $name.', '$name चालू कराने के लिए BrotriX Technologies को कॉल / WhatsApp करें।'))
-                  : openWhatsApp(AppConfig.brotrixPhone, 'Namaste BrotriX, please activate $name for ${app.shop!.shopName} (code ${d.shopCode}).'),
-              child: Text(L(app, 'Activate via BrotriX', 'BrotriX से चालू कराएँ')),
+              onPressed: () => AppConfig.salesPhone.isEmpty
+                  ? toast(context, L(app, 'Call / WhatsApp us to activate $name.', '$name चालू कराने के लिए हमें कॉल / WhatsApp करें।'))
+                  : openWhatsApp(AppConfig.salesPhone, 'Namaste, please activate $name for ${app.shop!.shopName} (code ${d.shopCode}).'),
+              child: Text(L(app, 'Ask to activate', 'चालू कराएँ')),
             ),
           ],
         ]),
@@ -532,7 +532,7 @@ class PlansScreen extends StatelessWidget {
   }
 }
 
-/// BrotriX (app company) controls for one shop: module switches and plan. PIN-protected.
+/// App admin controls for one shop: module switches and plan. PIN-protected.
 class SuperAdminScreen extends StatelessWidget {
   const SuperAdminScreen({super.key});
 

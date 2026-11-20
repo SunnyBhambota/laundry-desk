@@ -74,7 +74,9 @@ class ExportService {
           if (o.couponAmount > 0) row('Coupon ${o.couponCode}', '-${_m(o.couponAmount, cur)}'),
           if (o.pointsUsed > 0) row('Loyalty points', '-${_m(o.pointsUsed, cur)}'),
           if (o.packageValue > 0) row('Package (${o.packageNote})', '-${_m(o.packageValue, cur)}'),
-          if (o.tax > 0) row('GST ${o.taxPct.toStringAsFixed(0)}%', _m(o.tax, cur)),
+          if (o.tax > 0) row('CGST ${(o.taxPct / 2).toStringAsFixed(1)}%', _m(o.tax / 2, cur)),
+          if (o.tax > 0) row('SGST ${(o.taxPct / 2).toStringAsFixed(1)}%', _m(o.tax / 2, cur)),
+          if (o.tax > 0 && data.gstin.isNotEmpty) row('GSTIN', data.gstin),
           row('TOTAL', _m(o.total, cur), bold: true),
           row('Paid', _m(o.paid, cur)),
           row('Balance', _m(o.due, cur), bold: true),
@@ -84,7 +86,7 @@ class ExportService {
           pw.Text('${o.pieces} pieces. Please bring this bill when collecting.', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: _slate)),
           pw.Text('Thank you!', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 4),
-          pw.Text('LaundryCase by BrotriX Technologies', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 7, color: _slate)),
+          pw.Text('LaundryCase · Designed by SUNNY BHAMBOTA', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 7, color: _slate)),
         ]),
       ),
     ));
@@ -169,7 +171,7 @@ class ExportService {
         pw.Text('$periodLabel${branchId == null ? '' : ' - ${data.branch(branchId)?.name ?? ''}'}', style: const pw.TextStyle(color: _slate)),
       ]),
       footer: (ctx) => pw.Row(children: [
-        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 8, color: _slate)),
+        pw.Text('LaundryCase · Designed by SUNNY BHAMBOTA', style: const pw.TextStyle(fontSize: 8, color: _slate)),
         pw.Spacer(),
         pw.Text('Page ${ctx.pageNumber}/${ctx.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: _slate)),
       ]),
@@ -374,7 +376,7 @@ class ExportService {
           ]),
         ],
         pw.SizedBox(height: 18),
-        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 8, color: _slate)),
+        pw.Text('LaundryCase · Designed by SUNNY BHAMBOTA', style: const pw.TextStyle(fontSize: 8, color: _slate)),
       ],
     ));
     return doc.save();
@@ -421,7 +423,7 @@ class ExportService {
           pw.Text('Owner: ____________'),
         ]),
         pw.SizedBox(height: 8),
-        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 7, color: _slate)),
+        pw.Text('LaundryCase · Designed by SUNNY BHAMBOTA', style: const pw.TextStyle(fontSize: 7, color: _slate)),
       ]),
     ));
     return doc.save();
@@ -447,6 +449,23 @@ class ExportService {
               d.staff.where((s) => s.active && s.branchId == b.id).length,
             ];
           }(),
+      ]);
+
+  static String gstCsv(ShopData d, DateTime from, DateTime to, {String? branchId}) => _csv([
+        ['Date', 'Bill no', 'Customer', 'Phone', 'Taxable value', 'GST %', 'CGST', 'SGST', 'Total'],
+        for (final o in d.ordersIn(branchId).where((o) => o.status != 'cancelled' && !o.createdAt.isBefore(from) && o.createdAt.isBefore(to)).toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
+          [
+            dayKey(o.createdAt),
+            o.code,
+            d.customer(o.customerId)?.name ?? '',
+            d.customer(o.customerId)?.phone ?? '',
+            o.taxable.toStringAsFixed(2),
+            o.taxPct.toStringAsFixed(1),
+            (o.tax / 2).toStringAsFixed(2),
+            (o.tax / 2).toStringAsFixed(2),
+            o.total.toStringAsFixed(2),
+          ],
       ]);
 
   static String customersCsv(ShopData d) => _csv([
@@ -493,7 +512,7 @@ class ExportService {
         pw.Spacer(),
         pw.Text('Wash & fold  -  Dry clean  -  Steam iron  -  Home pickup & delivery', style: const pw.TextStyle(fontSize: 12, color: _slate)),
         pw.SizedBox(height: 6),
-        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 9, color: _slate)),
+        pw.Text('LaundryCase · Designed by SUNNY BHAMBOTA', style: const pw.TextStyle(fontSize: 9, color: _slate)),
       ]),
     ));
     return doc.save();

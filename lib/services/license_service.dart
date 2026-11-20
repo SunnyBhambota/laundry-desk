@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_config.dart';
 import '../data/shop_data.dart';
 
-/// BrotriX control: each shop's plan / expiry / modules live in licenses/{ownerUid}.
-/// Only BrotriX admins (admins/{uid} in Firestore) can change them; the owner can only read.
+/// App admin control: each shop's plan / expiry / modules live in licenses/{ownerUid}.
+/// Only app admins (admins/{uid} in Firestore) can change them; the owner can only read.
 class LicenseService {
   LicenseService._();
   static final instance = LicenseService._();
@@ -41,7 +41,7 @@ class LicenseService {
           ..disabledModules = disabled;
         d.changed();
       }
-      // keep the shop name / code fresh for the BrotriX list
+      // keep the shop name / code fresh for the admin list
       if (j['shopName'] != shopName || j['code'] != d.shopCode) {
         await ref.update({'shopName': shopName, 'code': d.shopCode, 'phone': phone});
       }

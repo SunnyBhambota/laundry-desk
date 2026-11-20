@@ -73,6 +73,7 @@ class AppState extends ChangeNotifier {
     await loadBio();
     final p = await SharedPreferences.getInstance();
     lang = p.getString('ld_lang') ?? 'en';
+    textScale = p.getDouble('ld_text_scale') ?? 1.0;
     owner = await AuthService.instance.currentOwner();
     if (owner != null) {
       await _openShop(owner!.uid);
@@ -270,6 +271,16 @@ class AppState extends ChangeNotifier {
     locked = false;
     notifyListeners();
     return true;
+  }
+
+  // big text for older staff (this phone only)
+  double textScale = 1.0;
+
+  Future<void> setTextScale(double v) async {
+    textScale = v;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setDouble('ld_text_scale', v);
   }
 
   // fingerprint / face unlock: a choice of this phone only (PIN stays as the backup)

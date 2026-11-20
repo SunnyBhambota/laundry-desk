@@ -51,6 +51,13 @@ class ShopData extends ChangeNotifier {
   List<StockUse> stockUses = [];
   List<Notice> notices = [];
   List<CashDay> cashDays = [];
+  List<Machine> machines = [];
+  List<MeterReading> readings = [];
+  List<StaffNote> staffNotes = [];
+  List<Loan> loans = [];
+  List<String> trainingItems = ['Billing in the app', 'Tagging clothes', 'Stain types & care labels', 'Machine safety', 'Customer behaviour'];
+  Map<String, double> meterRates = {'electricity': 9, 'water': 0.05, 'gas': 0};
+  String gstin = '';
   // v0.8 settings
   double dailyTarget = 0; // sales target per day (whole shop or per branch below)
   int dailyOrderTarget = 0;
@@ -147,6 +154,9 @@ class ShopData extends ChangeNotifier {
         'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
         'autoAssign': autoAssign,
         'referralPoints': referralPoints,
+        'trainingItems': trainingItems,
+        'meterRates': meterRates,
+        'gstin': gstin,
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -177,6 +187,9 @@ class ShopData extends ChangeNotifier {
     }
     autoAssign = j['autoAssign'] as bool? ?? autoAssign;
     referralPoints = (j['referralPoints'] as num?)?.toDouble() ?? referralPoints;
+    if (j['trainingItems'] is List) trainingItems = (j['trainingItems'] as List).map((e) => '$e').toList();
+    if (j['meterRates'] is Map) meterRates = Map<String, dynamic>.from(j['meterRates'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
+    gstin = j['gstin'] as String? ?? gstin;
   }
 
   void _loyalty(Object? l) {
@@ -323,6 +336,13 @@ class ShopData extends ChangeNotifier {
         'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
         'autoAssign': autoAssign,
         'referralPoints': referralPoints,
+        'trainingItems': trainingItems,
+        'meterRates': meterRates,
+        'gstin': gstin,
+        'machines': machines.map((e) => e.toJson()).toList(),
+        'readings': readings.map((e) => e.toJson()).toList(),
+        'staffNotes': staffNotes.map((e) => e.toJson()).toList(),
+        'loans': loans.map((e) => e.toJson()).toList(),
         'notices': notices.map((e) => e.toJson()).toList(),
         'cashDays': cashDays.map((e) => e.toJson()).toList(),
         'coupons': coupons.map((e) => e.toJson()).toList(),
@@ -369,6 +389,10 @@ class ShopData extends ChangeNotifier {
     _targets(j);
     notices = list('notices').map(Notice.fromJson).toList();
     cashDays = list('cashDays').map(CashDay.fromJson).toList();
+    machines = list('machines').map(Machine.fromJson).toList();
+    readings = list('readings').map(MeterReading.fromJson).toList();
+    staffNotes = list('staffNotes').map(StaffNote.fromJson).toList();
+    loans = list('loans').map(Loan.fromJson).toList();
     coupons = list('coupons').map(Coupon.fromJson).toList();
     packagePlans = list('packagePlans').map(PackagePlan.fromJson).toList();
     stock = list('stock').map(StockItem.fromJson).toList();
@@ -1030,6 +1054,175 @@ class ShopData extends ChangeNotifier {
   }
 
   /// Removes sample customers/orders/staff/expenses (keeps setup, rate card, branches you added).
+  // ---------- machines ----------
+
+  Machine addMachine(String name, {required String branchId, String kind = 'Washer', int everyDays = 90}) {
+    final m = Machine(id: newId('mc'), name: name.trim(), branchId: branchId, kind: kind, everyDays: everyDays, lastService: DateTime.now());
+    machines.add(m);
+    changed();
+    return m;
+  }
+
+  void serviceMachine(Machine m, {required String by, double cost = 0, String note = ''}) {
+    m
+      ..lastService = DateTime.now()
+      ..status = 'ok'
+      ..note = note.trim();
+    if (cost > 0) {
+      expenses.add(Expense(id: newId('e'), branchId: m.branchId.isEmpty ? branches.first.id : m.branchId, category: 'Repairs', amount: cost, at: DateTime.now(), note: '${m.name} service'));
+    }
+    log(by, 'machine.service', text: '${m.name}${cost > 0 ? ' ${cost.toStringAsFixed(0)}' : ''}');
+    changed();
+  }
+
+  /// Staff report a breakdown: a request of kind 'fault' (owner sees it with staff requests).
+  void reportFault(Machine m, {required String by, required String branchId, String note = ''}) {
+    requests.add(StaffRequest(id: newId('ft'), kind: 'fault', by: by, branchId: branchId, item: m.name, itemId: m.id, qty: 1, unit: '', note: note.trim(), urgent: true, at: DateTime.now()));
+    log(by, 'machine.fault', text: '${m.name} ${note.trim()}');
+    changed();
+  }
+
+  List<Machine> get machinesDue => machines.where((m) => m.serviceDue || m.status == 'broken' || requests.any((r) => r.kind == 'fault' && r.itemId == m.id && r.open)).toList();
+
+  // ---------- meters ----------
+
+  void addReading(String kind, String branchId, double value, {required String by}) {
+    readings.add(MeterReading(id: newId('mr'), kind: kind, branchId: branchId, value: value, at: DateTime.now(), by: by));
+    changed();
+  }
+
+  /// Units used between the last reading before [from] (or first in range) and the last reading before [to].
+  double meterUsed(String kind, String branchId, DateTime from, DateTime to) {
+    final l = readings.where((r) => r.kind == kind && r.branchId == branchId && r.at.isBefore(to)).toList()..sort((a, b) => a.at.compareTo(b.at));
+    if (l.length < 2) return 0;
+    final before = l.where((r) => r.at.isBefore(from)).toList();
+    final start = before.isNotEmpty ? before.last : l.first;
+    final end = l.last;
+    return (end.value - start.value).clamp(0, double.infinity).toDouble();
+  }
+
+  // ---------- staff notes, loans, training, late ----------
+
+  void addStaffNote(String staffId, String kind, String text, {required String by, double fine = 0}) {
+    staffNotes.add(StaffNote(id: newId('sn'), staffId: staffId, kind: kind, text: text.trim(), at: DateTime.now(), by: by, fine: fine));
+    log(by, 'staff.$kind', text: '${nameOf(staffId)}: ${text.trim()}${fine > 0 ? ' (−${fine.toStringAsFixed(0)})' : ''}');
+    changed();
+  }
+
+  void addLoan(String staffId, double amount, double monthly, String start, {required String by, String note = ''}) {
+    loans.add(Loan(id: newId('ln'), staffId: staffId, amount: amount, monthly: monthly, start: start, at: DateTime.now(), note: note.trim()));
+    log(by, 'loan', text: '${nameOf(staffId)}: ${amount.toStringAsFixed(0)} @ ${monthly.toStringAsFixed(0)}/month');
+    changed();
+  }
+
+  /// Minutes late (after shift start + 10 min grace) and overtime minutes for a month.
+  ({int days, int lateDays, int lateMin, int overMin}) shiftReport(Staff s, String month) {
+    var days = 0, lateDays = 0, lateMin = 0, overMin = 0;
+    for (final a in attendance.where((a) => a.staffId == s.id && a.day.startsWith(month))) {
+      days++;
+      if (s.shiftStart.length == 5) {
+        final st = DateTime(a.inAt.year, a.inAt.month, a.inAt.day, int.parse(s.shiftStart.substring(0, 2)), int.parse(s.shiftStart.substring(3)));
+        final late = a.inAt.difference(st).inMinutes;
+        if (late > 10) {
+          lateDays++;
+          lateMin += late;
+        }
+      }
+      if (s.shiftEnd.length == 5 && a.outAt != null) {
+        final en = DateTime(a.outAt!.year, a.outAt!.month, a.outAt!.day, int.parse(s.shiftEnd.substring(0, 2)), int.parse(s.shiftEnd.substring(3)));
+        final over = a.outAt!.difference(en).inMinutes;
+        if (over > 15) overMin += over;
+      }
+    }
+    return (days: days, lateDays: lateDays, lateMin: lateMin, overMin: overMin);
+  }
+
+  // ---------- analytics ----------
+
+  /// Sales per month for the last [n] months (oldest first): (label yyyy-mm, sales).
+  List<(String, double)> monthlySales(int n, {String? branchId}) {
+    final now = DateTime.now();
+    return [
+      for (var i = n - 1; i >= 0; i--)
+        () {
+          final from = DateTime(now.year, now.month - i, 1);
+          final to = DateTime(now.year, now.month - i + 1, 1);
+          final v = ordersIn(branchId).where((o) => o.status != 'cancelled' && !o.createdAt.isBefore(from) && o.createdAt.isBefore(to)).fold(0.0, (s, o) => s + o.total);
+          return ('${from.year}-${from.month.toString().padLeft(2, '0')}', v);
+        }(),
+    ];
+  }
+
+  /// Orders by weekday (Mon..Sun) and by hour (0..23) in [from, to).
+  (List<int>, List<int>) busyTimes(DateTime from, DateTime to, {String? branchId}) {
+    final wd = List.filled(7, 0), hr = List.filled(24, 0);
+    for (final o in ordersIn(branchId)) {
+      if (o.createdAt.isBefore(from) || !o.createdAt.isBefore(to)) continue;
+      wd[o.createdAt.weekday - 1]++;
+      hr[o.createdAt.hour]++;
+    }
+    return (wd, hr);
+  }
+
+  /// Per service: (revenue, pieces/kg, orders) in [from, to). Discounts / offers spread by share.
+  Map<String, (double, double, int)> serviceRevenue(DateTime from, DateTime to, {String? branchId}) {
+    final m = <String, (double, double, int)>{};
+    for (final o in ordersIn(branchId)) {
+      if (o.status == 'cancelled' || o.createdAt.isBefore(from) || !o.createdAt.isBefore(to) || o.subtotal <= 0) continue;
+      final f = o.taxable / o.subtotal; // after discount + offers, before tax
+      final seen = <String>{};
+      for (final l in o.lines) {
+        final cur = m[l.service] ?? (0.0, 0.0, 0);
+        m[l.service] = (cur.$1 + l.amount * f, cur.$2 + (l.unit == 'kg' ? l.qty : l.pieces.toDouble()), cur.$3 + (seen.add(l.service) ? 1 : 0));
+      }
+    }
+    return m;
+  }
+
+  /// Regular customers (3+ orders) who have not come for [days].
+  List<Customer> lostRegulars({int days = 45}) {
+    final n = DateTime.now();
+    return customers.where((c) {
+      final os = orders.where((o) => o.customerId == c.id && o.status != 'cancelled').length;
+      final l = lastVisit(c.id);
+      return os >= 3 && l != null && n.difference(l).inDays >= days;
+    }).toList();
+  }
+
+  /// Delivery person in [from, to): drops, pickups, avg minutes out→delivered, km (from GPS pings), on-time %.
+  ({int drops, int pickups, double avgMin, double km, double onTime}) deliveryStats(String staffId, DateTime from, DateTime to) {
+    var drops = 0, pickups = 0, ontime = 0;
+    var mins = 0.0;
+    for (final o in orders) {
+      for (final h in o.history) {
+        if (h.by != staffId || h.at.isBefore(from) || !h.at.isBefore(to)) continue;
+        if (h.status == 'delivered' && o.homeDelivery) {
+          drops++;
+          final out = o.timeOf('out');
+          if (out != null) mins += h.at.difference(out).inMinutes;
+          if (!h.at.isAfter(o.dueAt.add(const Duration(hours: 2)))) ontime++;
+        }
+        if (h.status == 'received' && o.timeOf('pickup') != null) pickups++;
+      }
+    }
+    var km = 0.0;
+    final ps = (pings[staffId] ?? []).where((p) => !p.at.isBefore(from) && p.at.isBefore(to)).toList()..sort((a, b) => a.at.compareTo(b.at));
+    for (var i = 1; i < ps.length; i++) {
+      if (dayKey(ps[i].at) != dayKey(ps[i - 1].at)) continue;
+      final d = _km(ps[i - 1].lat, ps[i - 1].lng, ps[i].lat, ps[i].lng);
+      if (d < 5) km += d; // ignore GPS jumps
+    }
+    return (drops: drops, pickups: pickups, avgMin: drops == 0 ? 0 : mins / drops, km: km, onTime: drops == 0 ? 0 : ontime / drops * 100);
+  }
+
+  static double _km(double a1, double o1, double a2, double o2) {
+    const r = 6371.0;
+    double rad(double x) => x * pi / 180;
+    final da = rad(a2 - a1), dlo = rad(o2 - o1);
+    final h = sin(da / 2) * sin(da / 2) + cos(rad(a1)) * cos(rad(a2)) * sin(dlo / 2) * sin(dlo / 2);
+    return 2 * r * asin(sqrt(h));
+  }
+
   // ---------- customers: groups, history, statement ----------
 
   DateTime? lastVisit(String customerId) {
@@ -1065,6 +1258,8 @@ class ShopData extends ChangeNotifier {
         return l.take(20).toList();
       case 'new':
         return customers.where((c) => n.difference(c.createdAt).inDays <= 30).toList();
+      case 'lost':
+        return lostRegulars();
       case 'low_rating':
         final ids = {for (final o in orders) if (o.rating > 0 && o.rating <= 2) o.customerId};
         return customers.where((c) => ids.contains(c.id)).toList();
@@ -1329,6 +1524,10 @@ class ShopData extends ChangeNotifier {
     requests.removeWhere((r) => demo(r.id) || demo(r.by));
     stockUses.removeWhere((u) => demo(u.id) || demo(u.by));
     notices.removeWhere((n) => demo(n.id));
+    machines.removeWhere((m) => demo(m.id));
+    readings.removeWhere((r) => demo(r.id));
+    staffNotes.removeWhere((x) => demo(x.id) || demo(x.staffId));
+    loans.removeWhere((x) => demo(x.id) || demo(x.staffId));
     cashDays.removeWhere((c) => demo(c.branchId) || demo(c.openedBy) || demo(c.closedBy));
     final after = customers.length + orders.length + staff.length + expenses.length + branches.length + attendance.length + activity.length +
         pings.length + issues.length + coupons.length + packagePlans.length + stock.length + stockMoves.length + suppliers.length + payouts.length;
