@@ -2,6 +2,7 @@ name: Build Android APK
 
 on:
   push:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 jobs:
@@ -41,6 +42,7 @@ jobs:
   # Opens the APK on an Android emulator. If the app does not stay open, nothing is published.
   smoke:
     needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -86,6 +88,7 @@ jobs:
   # Real end-to-end test on an emulator against the live Firebase project:
   # sign up, setup, re-login (mobile / email), staff login, branch totals.
   e2e:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
