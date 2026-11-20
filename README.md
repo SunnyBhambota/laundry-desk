@@ -111,3 +111,6 @@ Testing mein `AppConfig.enforcePremium = false` (sab khula). Launch se pehle `tr
 ## Build
 GitHub Actions (`.github/workflows/build-apk.yml`): flutter create (android) → icon → analyze → tests → APK → emulator check → Release (sirf `main`).
 `dev` branch par push = sirf build check, release nahi.
+
+## v0.8 – v0.10
+Work assign and My Work, rack numbers, notices, leave, daily target, cash drawer, audit log, notifications, garment photos, licences, piece tags, ratings, customer groups, statements, referral, staff permissions, GST, machines, meters, staff report, insights graphs, backup reminder, text size, offline cache. See PROJECT_NOTES.md.

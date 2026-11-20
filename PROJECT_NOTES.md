@@ -66,6 +66,14 @@
 - `screens/live_map_screen.dart`: LiveMapScreen (flutter_map + OSRM route + Nominatim geocode fallback, GPS stream for delivery role, last ping for others). Used by order detail / delivery TaskCard / customer page.
 - `ShopData.clearSample()` returns count, keeps own records (moves them to a real branch); `deleteSampleFlow` in dashboard_screen.dart; e2e checks cloud after delete.
 
+## v0.8 – v0.10 (21 Nov 2026, released v0.10.0-build44)
+- Branding: company = BrotriX Technologies (footer "Designed by BrotriX Technologies", PDFs "LaundryCase by BrotriX Technologies"). Owner confirmed: never remove BrotriX; "SUNNY BHAMBOTA" credit was a mistake and is reverted.
+- v0.8 (`v08_screens.dart`): work assign + My Work, rack number, notices, leave, ready -> WhatsApp, daily target, piece count at hand-over, garment details, repeat order, cash drawer, audit log.
+- v0.9 (`v09_screens.dart`): local notifications (only while app alive), garment photos, licenses/{uid} + admins/{uid}, per-piece tag scan, clothes history, ratings, customer groups, monthly statement PDF, referral, staff permissions + shift.
+- v0.10 (`v10_screens.dart`): GST (CGST/SGST, GSTIN, CSV), service-wise earning, machines, meters, staff report (late/overtime/leave/notes/loans/training), insights graphs, lost regulars, delivery report, backup reminder, text size, offline cache.
+- Not done: dark mode, Marathi/Gujarati, auto Drive backup, push when app is killed (needs paid server).
+- Firestore rules: staff may write customers, orders, attendance, activity, pings, issues, payouts, requests, stockUses, notices, cashDays, photos, readings. machines/staffNotes/loans are owner-only. Owner creates admins/{uid} by hand for the BrotriX admin screen.
+
 ## Owner ko bataya hua pending (order mein)
 v0.3: order edit/refund/customer delete, QR scan, Bluetooth printer, UPI QR on bill, VIP/business rates, backup/restore file, Hindi gaps.
 v0.4: loyalty/coupons/packages, background tracking, pickup slots + route + map, inventory/suppliers, Google login (OTP/reset need Blaze).
