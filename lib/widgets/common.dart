@@ -7,6 +7,24 @@ import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
+/// Dark mode is an inverted colour filter over the whole app; photos and the logo get the same
+/// filter again so they look normal (two inversions cancel out).
+const List<double> darkMatrix = <double>[
+  0.574, -1.430, -0.144, 0, 255,
+  -0.426, 0.570, -0.144, 0, 255,
+  -0.426, -1.430, 1.856, 0, 255,
+  0, 0, 0, 1, 0,
+];
+
+class NoInvert extends StatelessWidget {
+  const NoInvert({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      context.watch<AppState>().dark ? ColorFiltered(colorFilter: const ColorFilter.matrix(darkMatrix), child: child) : child;
+}
+
 /// App logo (owner's LaundryCase design: washing machine + towels), assets/images/logo_mark.png.
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 34});
@@ -14,9 +32,11 @@ class LogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      ClipRRect(
-        borderRadius: BorderRadius.circular(size * .22),
-        child: Image.asset('assets/images/logo_mark.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'LaundryCase'),
+      NoInvert(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size * .22),
+          child: Image.asset('assets/images/logo_mark.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'LaundryCase'),
+        ),
       );
 }
 
@@ -118,7 +138,7 @@ class LangToggle extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: .95)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [pill('en', 'EN'), pill('hi', 'हिं')]),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [pill('en', 'EN'), pill('hi', 'हिं'), pill('mr', 'मरा'), pill('gu', 'ગુ')]),
     );
   }
 }

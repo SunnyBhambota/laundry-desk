@@ -8,6 +8,7 @@ import 'screens/lock_screen.dart';
 import 'screens/shell.dart';
 import 'services/auth_service.dart';
 import 'state/app_state.dart';
+import 'widgets/common.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -31,7 +32,9 @@ class LaundryDeskApp extends StatelessWidget {
       home: const AuthGate(),
       // The app lock sits above every screen (also above Settings / order pages that were open).
       builder: (context, child) => Consumer<AppState>(
-        builder: (context, s, _) => Stack(children: [
+        builder: (context, s, _) => ColorFiltered(
+          colorFilter: s.dark ? const ColorFilter.matrix(darkMatrix) : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+          child: Stack(children: [
           if (child != null)
             MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
@@ -45,6 +48,7 @@ class LaundryDeskApp extends StatelessWidget {
               ),
             ),
         ]),
+        ),
       ),
     );
   }

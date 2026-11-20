@@ -74,6 +74,7 @@ class AppState extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     lang = p.getString('ld_lang') ?? 'en';
     textScale = p.getDouble('ld_text_scale') ?? 1.0;
+    dark = p.getBool('ld_dark') ?? false;
     owner = await AuthService.instance.currentOwner();
     if (owner != null) {
       await _openShop(owner!.uid);
@@ -271,6 +272,16 @@ class AppState extends ChangeNotifier {
     locked = false;
     notifyListeners();
     return true;
+  }
+
+  // dark mode (this phone only)
+  bool dark = false;
+
+  Future<void> setDark(bool v) async {
+    dark = v;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setBool('ld_dark', v);
   }
 
   // big text for older staff (this phone only)

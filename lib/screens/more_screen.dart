@@ -132,6 +132,7 @@ class _MoreScreenState extends State<MoreScreen> {
             tile(Icons.local_laundry_service_outlined, L(app, 'Machines', 'मशीनें'), () => go(const MachinesScreen()),
                 sub: d.machinesDue.isEmpty ? null : '${d.machinesDue.length} ${L(app, 'need attention', 'ध्यान चाहिए')}'),
             if (app.role != Role.delivery) tile(Icons.speed_outlined, L(app, 'Meter readings (light, water, gas)', 'मीटर रीडिंग (बिजली, पानी, गैस)'), () => go(const MetersScreen())),
+            tile(Icons.dark_mode_outlined, L(app, app.dark ? 'Dark mode: ON (tap for light)' : 'Dark mode: OFF (tap to turn on)', app.dark ? 'डार्क मोड: चालू (लाइट के लिए दबाएँ)' : 'डार्क मोड: बंद (चालू करने के लिए दबाएँ)'), () => app.setDark(!app.dark)),
             tile(Icons.text_increase_rounded, L(app, 'Text size', 'अक्षर का साइज़'), () => textSizeSheet(context, app), sub: app.textScale == 1 ? L(app, 'Normal', 'सामान्य') : '${(app.textScale * 100).round()}%'),
             tile(Icons.inbox_outlined, app.canManage ? L(app, 'Staff requests & leave', 'स्टाफ की माँग और छुट्टी') : L(app, 'Ask the boss (things / leave)', 'बॉस से माँगें (चीज़ / छुट्टी)'),
                 () => go(const RequestsScreen()),

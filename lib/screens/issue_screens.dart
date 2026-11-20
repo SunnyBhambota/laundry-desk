@@ -25,7 +25,7 @@ String reasonText(AppState app, String r) {
     'Other': 'कुछ और',
     'Wrong delivery': 'गलत डिलीवरी',
   };
-  return app.lang == 'hi' ? (hi[r] ?? r) : r;
+  return app.lang != 'en' ? (hi[r] ?? r) : r;
 }
 
 String stageText(AppState app, String s) {
@@ -51,7 +51,7 @@ String stageText(AppState app, String s) {
     'reopened': 'दोबारा खुला',
     'task': 'काम पूरा',
   };
-  return (app.lang == 'hi' ? hi[s] : en[s]) ?? s;
+  return (app.lang != 'en' ? hi[s] : en[s]) ?? s;
 }
 
 class IssueChip extends StatelessWidget {

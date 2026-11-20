@@ -342,11 +342,11 @@ class ShareRow extends StatelessWidget {
 }
 
 /// Inline English / Hindi text for newer screens.
-String L(AppState app, String en, String hi) => app.lang == 'hi' ? hi : en;
+String L(AppState app, String en, String hi) => app.lang == 'en' ? en : hi;
 
 /// Hindi names for built-in garments, services and expense types (owner's own names stay as typed).
 String hiName(AppState app, String s) {
-  if (app.lang != 'hi') return s;
+  if (app.lang == 'en') return s;
   const m = {
     'Shirt': 'शर्ट', 'T-shirt': 'टी-शर्ट', 'Trouser / Pant': 'पैंट', 'Jeans': 'जीन्स', 'Kurta': 'कुर्ता',
     'Suit (2 pc)': 'सूट (2 पीस)', 'Suit (3 pc)': 'सूट (3 पीस)', 'Blazer / Coat': 'ब्लेज़र / कोट', 'Sherwani': 'शेरवानी',

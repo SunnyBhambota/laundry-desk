@@ -1,3 +1,4 @@
+import 'strings_mr_gu.dart';
 import 'strings_ops.dart';
 
 /// English (default) and Hindi text. Missing Hindi falls back to English.
@@ -267,6 +268,8 @@ class S {
   };
 
   static String of(String lang, String key) {
+    if (lang == 'mr') return marathi[key] ?? hi[key] ?? opsHi[key] ?? en[key] ?? opsEn[key] ?? key;
+    if (lang == 'gu') return gujarati[key] ?? hi[key] ?? opsHi[key] ?? en[key] ?? opsEn[key] ?? key;
     if (lang == 'hi') return hi[key] ?? opsHi[key] ?? en[key] ?? opsEn[key] ?? key;
     return en[key] ?? opsEn[key] ?? key;
   }

@@ -96,7 +96,7 @@ class _OrderPhotosCardState extends State<OrderPhotosCard> {
                           context: context,
                           builder: (c) => Dialog(
                             child: Column(mainAxisSize: MainAxisSize.min, children: [
-                              Image.memory(p.bytes, fit: BoxFit.contain),
+                              NoInvert(child: Image.memory(p.bytes, fit: BoxFit.contain)),
                               Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Text('${p.note.isEmpty ? '' : '${p.note} · '}${d.nameOf(p.by)} · ${whenText(p.at)}'),
@@ -115,7 +115,7 @@ class _OrderPhotosCardState extends State<OrderPhotosCard> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.memory(p.bytes, width: 96, height: 96, fit: BoxFit.cover)),
+                          child: NoInvert(child: ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.memory(p.bytes, width: 96, height: 96, fit: BoxFit.cover))),
                         ),
                       ),
                   ]),
