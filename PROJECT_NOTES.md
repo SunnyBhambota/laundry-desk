@@ -1,7 +1,7 @@
 # Laundry Desk – Project notes (Claude ke liye handoff)
 
 ## Owner ki zaroori baatein
-- (20 Nov raat) Git par push/build se PEHLE owner se poochna hai: "Git par daalun?" – haan bole tabhi push.
+- Git rule (20 Nov raat): push se pehle repo visibility check karo (`gh api repos/SunnyBhambota/laundry-desk -q .visibility`). PUBLIC = seedha push karte raho. PRIVATE = owner se poochho, permission ke baad hi push.
 - HAR release ke saath install QR file (laundry-desk-install-qr.png / docs/install-qr.png) SendUserFile se bhejna – owner ka rule.
 - App naam ab LaundryCase (logo owner ka, 20 Nov). Package id com.brotrix.laundry same.
 - Baat Hinglish mein, English letters mein.
