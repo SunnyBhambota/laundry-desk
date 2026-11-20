@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
 import '../data/reports.dart';
+import '../data/shop_data.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -237,6 +238,14 @@ class _StaffScreenState extends State<StaffScreen> {
         ]));
   }
 
+  static String _hhmm(String v) {
+    final m = RegExp(r'^(\d{1,2})[:.]?(\d{2})?$').firstMatch(v.trim());
+    if (m == null) return '';
+    final h = int.parse(m.group(1)!).clamp(0, 23);
+    final mi = int.tryParse(m.group(2) ?? '0')?.clamp(0, 59) ?? 0;
+    return '${h.toString().padLeft(2, '0')}:${mi.toString().padLeft(2, '0')}';
+  }
+
   void _editStaff(BuildContext context, AppState app, Staff s) {
     final d = app.data!;
     final t = app.t;
@@ -245,6 +254,19 @@ class _StaffScreenState extends State<StaffScreen> {
     final pin = TextEditingController();
     var role = s.role;
     var branch = d.branch(s.branchId) == null ? d.branches.first.id : s.branchId;
+    final perms = {for (final k in ShopData.permKeys) k: s.perms[k] ?? ShopData.permDefault(s.role, k)};
+    final shiftA = TextEditingController(text: s.shiftStart);
+    final shiftB = TextEditingController(text: s.shiftEnd);
+    const permNames = {
+      'discount': ('Give discount', 'डिस्काउंट दे सके'),
+      'refund': ('Refund money', 'पैसे लौटा सके'),
+      'editOrder': ('Edit orders', 'ऑर्डर बदल सके'),
+      'cancel': ('Cancel orders', 'ऑर्डर कैंसिल कर सके'),
+      'deleteCustomer': ('Delete customers', 'ग्राहक हटा सके'),
+      'expenses': ('Add / see expenses', 'खर्चे डाल / देख सके'),
+      'reports': ('See reports', 'रिपोर्ट देख सके'),
+      'rates': ('Change rate card', 'रेट बदल सके'),
+    };
     sheet(context, s.name, (c) => StatefulBuilder(builder: (c, set) {
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             TextField(controller: name, decoration: fieldDeco(t('name'), icon: Icons.person_outline)),
@@ -272,6 +294,25 @@ class _StaffScreenState extends State<StaffScreen> {
                 maxLength: 4,
                 decoration: fieldDeco(L(app, 'New 4-digit PIN (leave empty to keep)', 'नया 4 अंक PIN (खाली = वही)'), icon: Icons.pin_outlined)),
             const SizedBox(height: 6),
+            const SizedBox(height: 6),
+            Text(L(app, 'Shift time', 'शिफ्ट का समय'), style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Row(children: [
+              Expanded(child: TextField(controller: shiftA, decoration: fieldDeco(L(app, 'From (e.g. 09:30)', 'से (जैसे 09:30)')))),
+              const SizedBox(width: 8),
+              Expanded(child: TextField(controller: shiftB, decoration: fieldDeco(L(app, 'To (e.g. 19:00)', 'तक (जैसे 19:00)')))),
+            ]),
+            const SizedBox(height: 10),
+            Text(L(app, 'What can this person do?', 'ये क्या-क्या कर सकते हैं?'), style: const TextStyle(fontWeight: FontWeight.w700)),
+            for (final k in ShopData.permKeys)
+              SwitchListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(L(app, permNames[k]!.$1, permNames[k]!.$2)),
+                value: perms[k]!,
+                onChanged: (v) => set(() => perms[k] = v),
+              ),
+            const SizedBox(height: 6),
             FilledButton(
               onPressed: () {
                 if (pin.text.isNotEmpty && !RegExp(r'^\d{4}$').hasMatch(pin.text)) {
@@ -283,7 +324,11 @@ class _StaffScreenState extends State<StaffScreen> {
                   ..name = name.text.trim().isEmpty ? s.name : name.text.trim()
                   ..role = role
                   ..branchId = branch
-                  ..salary = double.tryParse(salary.text) ?? s.salary;
+                  ..salary = double.tryParse(salary.text) ?? s.salary
+                  ..shiftStart = _hhmm(shiftA.text)
+                  ..shiftEnd = _hhmm(shiftB.text)
+                  ..perms = {for (final e in perms.entries) if (e.value != ShopData.permDefault(role, e.key)) e.key: e.value};
+                d.log('owner', 'staff.edit', text: s.name);
                 if (moved) d.log('owner', 'staff.move', text: '${s.name} → ${d.branch(branch)?.name ?? ''}');
                 if (pin.text.isNotEmpty) {
                   d.setStaffPin(s, pin.text);

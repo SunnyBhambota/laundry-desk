@@ -434,5 +434,43 @@ void main() {
     d.clearSample();
     expect(d.notices.where((x) => x.id.startsWith('demo_')), isEmpty);
   });
+
+  test('v0.9: referral, groups, rating, permissions, statement', () async {
+    final d = ShopData('local_v09');
+    final shop = _shop();
+    await d.initialise(shop);
+    SampleData.fill(d, services: shop.services);
+    final a = d.customers.first;
+    final b = d.addCustomer(name: 'New Friend', phone: '9000000001');
+    b.referredBy = a.id;
+    final pa = a.points;
+    d.referralPoints = 50;
+    final o = d.createOrder(customerId: b.id, branchId: d.branches.first.id, lines: [OrderLine(garment: 'Shirt', service: 'Wash & iron', qty: 2, rate: 30)], by: 'owner');
+    d.setStatus(o, 'delivered', by: 'owner');
+    expect(a.points, pa + 50);
+    expect(b.referralPaid, isTrue);
+    final pb = b.points;
+    final o2 = d.createOrder(customerId: b.id, branchId: d.branches.first.id, lines: [OrderLine(garment: 'Shirt', service: 'Wash & iron', qty: 1, rate: 30)], by: 'owner');
+    d.setStatus(o2, 'delivered', by: 'owner');
+    expect(b.points, lessThan(pb + 50)); // only once
+    d.rateOrder(o, 2, by: 'owner', note: 'late');
+    expect(d.customerGroup('low_rating').map((c) => c.id), contains(b.id));
+    expect(d.customerGroup('new').map((c) => c.id), contains(b.id));
+    expect(d.customerGroup('top').length, lessThanOrEqualTo(20));
+    expect(d.clothesHistory(b.id).length, 2);
+    final counter = d.staff.firstWhere((s) => s.role == Role.counter);
+    expect(d.can(counter, 'refund'), isFalse);
+    expect(d.can(counter, 'discount'), isTrue);
+    counter.perms['refund'] = true;
+    expect(d.can(counter, 'refund'), isTrue);
+    expect(d.can(null, 'refund'), isTrue);
+    expect(Staff.fromJson(counter.toJson()).perms['refund'], isTrue);
+    expect(LaundryOrder.fromJson(o.toJson()).rating, 2);
+    final back = Customer.fromJson(b.toJson());
+    expect(back.referredBy, a.id);
+    final n = DateTime.now();
+    final pdf = await ExportService.statementPdf(shop: shop, data: d, c: a, from: DateTime(n.year, n.month, 1), to: DateTime(n.year, n.month + 1, 1));
+    expect(pdf.length, greaterThan(1000));
+  });
 }
 

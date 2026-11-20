@@ -7,6 +7,10 @@ service cloud.firestore {
     function memberDoc() { return get(/databases/$(database)/documents/members/$(request.auth.uid)).data; }
     // Staff phone: a "members" record whose PIN hash still matches the owner's staffKeys list
     // (removing a staff member or changing the PIN cuts access at once).
+    // BrotriX admin: a document admins/{uid} made by hand in the Firebase console
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
     function isMember(owner) {
       return signedIn()
         && exists(/databases/$(database)/documents/members/$(request.auth.uid))
@@ -35,6 +39,20 @@ service cloud.firestore {
         allow write: if isOwner(owner)
           || (isMember(owner) && col in ['customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'payouts', 'requests', 'stockUses', 'notices', 'cashDays', 'photos', 'readings']);
       }
+    }
+
+    // BrotriX control: plan / expiry / modules of every shop. Owner reads, only BrotriX changes.
+    match /licenses/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid) && request.resource.data.plan == 'trial';
+      allow update: if isAdmin()
+        || (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shopName', 'code', 'phone']));
+      allow delete: if isAdmin();
+    }
+    match /admins/{uid} {
+      allow get: if isOwner(uid);
+      allow list, write: if false;
     }
 
     // Shop code → owner (staff login looks this up)

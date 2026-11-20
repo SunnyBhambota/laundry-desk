@@ -69,6 +69,9 @@ class Customer {
     this.points = 0,
     List<CustPackage>? packages,
     DateTime? createdAt,
+    this.dob,
+    this.referredBy = '',
+    this.referralPaid = false,
   })  : packages = packages ?? [],
         createdAt = createdAt ?? DateTime.now();
 
@@ -83,6 +86,9 @@ class Customer {
   double points; // loyalty points
   final List<CustPackage> packages;
   final DateTime createdAt;
+  DateTime? dob; // birthday (year not important)
+  String referredBy; // customer id who brought this customer
+  bool referralPaid; // referral points given
 
   bool get hasLocation => lat != null && lng != null;
   CustPackage? activePackage(String service, String unit) => packages
@@ -101,6 +107,9 @@ class Customer {
         'points': points,
         'packages': packages.map((p) => p.toJson()).toList(),
         'createdAt': createdAt.toIso8601String(),
+        if (dob != null) 'dob': dob!.toIso8601String(),
+        if (referredBy.isNotEmpty) 'referredBy': referredBy,
+        if (referralPaid) 'referralPaid': true,
       };
   factory Customer.fromJson(Map<String, dynamic> j) => Customer(
         id: j['id'] as String,
@@ -114,6 +123,9 @@ class Customer {
         points: (j['points'] as num?)?.toDouble() ?? 0,
         packages: ((j['packages'] as List?) ?? []).map((e) => CustPackage.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         createdAt: DateTime.tryParse(j['createdAt'] as String? ?? ''),
+        dob: DateTime.tryParse(j['dob'] as String? ?? ''),
+        referredBy: j['referredBy'] as String? ?? '',
+        referralPaid: j['referralPaid'] as bool? ?? false,
       );
 }
 
@@ -572,6 +584,8 @@ class LaundryOrder {
     this.deliveryAgent = '',
     this.rack = '',
     this.countOut,
+    this.rating = 0,
+    this.ratingNote = '',
     this.notes = '',
     this.createdBy = '',
     this.proof,
@@ -604,6 +618,8 @@ class LaundryOrder {
   String deliveryAgent;
   String rack;
   int? countOut; // pieces counted at hand-over (null = not counted)
+  int rating; // customer feedback 1–5 (0 = not given)
+  String ratingNote;
   String notes;
   String createdBy;
   Ping? proof; // where the order was handed over (delivery proof)
@@ -661,6 +677,8 @@ class LaundryOrder {
         'deliveryAgent': deliveryAgent,
         'rack': rack,
         if (countOut != null) 'countOut': countOut,
+        if (rating > 0) 'rating': rating,
+        if (ratingNote.isNotEmpty) 'ratingNote': ratingNote,
         'notes': notes,
         'createdBy': createdBy,
         'proof': proof?.toJson(),
@@ -693,6 +711,8 @@ class LaundryOrder {
         deliveryAgent: j['deliveryAgent'] as String? ?? '',
         rack: j['rack'] as String? ?? '',
         countOut: (j['countOut'] as num?)?.toInt(),
+        rating: (j['rating'] as num?)?.toInt() ?? 0,
+        ratingNote: j['ratingNote'] as String? ?? '',
         notes: j['notes'] as String? ?? '',
         createdBy: j['createdBy'] as String? ?? '',
         proof: j['proof'] is Map ? Ping.fromJson(Map<String, dynamic>.from(j['proof'] as Map)) : null,

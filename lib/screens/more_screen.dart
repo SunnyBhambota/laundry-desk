@@ -19,6 +19,7 @@ import '../data/issue_models.dart';
 import 'reports_screen.dart';
 import 'v06_screens.dart';
 import 'v08_screens.dart';
+import 'v09_screens.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -107,9 +108,9 @@ class _MoreScreenState extends State<MoreScreen> {
                 sub: L(app, 'WhatsApp pickup requests · poster', 'WhatsApp पिकअप रिक्वेस्ट · पोस्टर')),
             tile(Icons.report_problem_outlined, L(app, 'Complaints & issues', 'शिकायतें और इश्यू'), () => go(const IssuesScreen())),
             tile(Icons.list_alt_rounded, t('rateCard'), () => go(const RateCardScreen())),
-            if (app.canManage) tile(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
+            if ((app.canManage || app.role == Role.counter) && app.can('reports')) tile(Icons.insights_outlined, t('reports'), () => go(const ReportsScreen())),
             if (app.canManage) tile(Icons.point_of_sale_outlined, L(app, 'Day closing (cash book)', 'दिन का हिसाब (कैश बुक)'), () => go(const DayCloseScreen())),
-            if (app.canManage) tile(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
+            if ((app.canManage || app.role == Role.counter) && app.can('expenses')) tile(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
             if (app.isOwner) tile(Icons.store_mall_directory_outlined, t('branches'), () => go(const BranchesScreen())),
             if (app.isOwner) tile(Icons.tune_rounded, L(app, 'Commission rules', 'कमीशन के नियम'), () => go(const RulesScreen())),
           ]),
@@ -152,7 +153,7 @@ class _MoreScreenState extends State<MoreScreen> {
                     _taps++;
                     if (_taps >= 7) {
                       _taps = 0;
-                      SuperAdminScreen.open(context);
+                      openBrotrixAdmin(context);
                     }
                   }
                 : null,

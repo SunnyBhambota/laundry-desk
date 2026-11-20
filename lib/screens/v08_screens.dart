@@ -10,6 +10,7 @@ import '../widgets/branch_switch.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
+import 'v09_screens.dart';
 
 String _q(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
 
@@ -70,7 +71,17 @@ Future<bool> changeStatusFlow(BuildContext context, AppState app, LaundryOrder o
             for (final l in o.lines)
               Text('• ${l.garment} ${ShopData.qtyLabel(l)}${l.details.isEmpty ? '' : ' (${l.details})'}', style: const TextStyle(color: LD.slate)),
             const SizedBox(height: 12),
-            Text(L(app, 'How many are you handing over?', 'कितने दे रहे हैं?')),
+            Row(children: [
+              Expanded(child: Text(L(app, 'How many are you handing over?', 'कितने दे रहे हैं?'))),
+              TextButton.icon(
+                onPressed: () async {
+                  final got = await Navigator.push<int>(sc, MaterialPageRoute(builder: (_) => PieceScanScreen(orderId: o.id)));
+                  if (got != null) set(() => n = got);
+                },
+                icon: const Icon(Icons.qr_code_scanner, size: 18),
+                label: Text(L(app, 'Scan tags', 'टैग स्कैन')),
+              ),
+            ]),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton.filledTonal(onPressed: n > 0 ? () => set(() => n--) : null, icon: const Icon(Icons.remove)),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 22), child: Text('$n', style: heading(34, color: bad ? const Color(0xFFB42318) : LD.success))),

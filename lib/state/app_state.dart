@@ -12,6 +12,8 @@ import '../data/shop_data.dart';
 import '../l10n/strings.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
+import '../services/notify_service.dart';
+import '../services/license_service.dart';
 import '../services/shop_store.dart';
 import '../services/tracking_service.dart';
 
@@ -37,6 +39,9 @@ class AppState extends ChangeNotifier {
   String get actorName => staffUser?.name ?? owner?.name ?? '';
   bool get isOwner => staffUser == null;
   bool get canManage => role == Role.owner || role == Role.manager;
+
+  /// Owner-set yes/no rights (discount, refund, editOrder, cancel, deleteCustomer, expenses, reports, rates).
+  bool can(String key) => data?.can(staffUser, key) ?? isOwner;
 
   /// Staff (non-owner) only see their own branch.
   String? get scopeBranch => isOwner ? branchFilter : (role == Role.manager ? staffUser!.branchId : staffUser!.branchId);
@@ -71,6 +76,7 @@ class AppState extends ChangeNotifier {
     owner = await AuthService.instance.currentOwner();
     if (owner != null) {
       await _openShop(owner!.uid);
+      if (shop != null && data != null) LicenseService.instance.sync(data!, shopName: shop!.shopName, phone: owner!.mobile);
     } else {
       final raw = p.getStringList(_kStaff);
       if (raw != null && raw.length == 2) {
@@ -97,7 +103,63 @@ class AppState extends ChangeNotifier {
     data?.dispose();
     data = await ShopData.open(uid, admin: admin);
     data!.addListener(notifyListeners);
+    data!.onRemote = _onRemote;
+    _seen = null;
+    NotifyService.instance.init();
   }
+
+  // ---------- phone notifications (new request / complaint / work / notice) ----------
+  Set<String>? _seen;
+
+  Map<String, (String, String)> _alertKeys() {
+    final d = data;
+    final m = <String, (String, String)>{};
+    if (d == null) return m;
+    final me = actorId;
+    final myBranch = staffUser?.branchId;
+    if (canManage) {
+      for (final r in d.requests.where((r) => r.status == 'pending' && (myBranch == null || r.branchId == myBranch))) {
+        m['rq${r.id}'] = (
+          r.kind == 'leave' ? 'Leave request – ${d.nameOf(r.by)}' : 'Staff request${r.urgent ? ' (URGENT)' : ''} – ${d.nameOf(r.by)}',
+          r.kind == 'leave' ? '${r.leaveDays} day(s) ${r.note}' : '${r.item} × ${r.qty.toStringAsFixed(0)} ${r.unit}'
+        );
+      }
+      for (final i in d.issues.where((i) => i.open && (myBranch == null || i.branchId == myBranch))) {
+        m['is${i.id}'] = ('New complaint ${i.code}', i.reason);
+      }
+      for (final a in d.activity.where((a) => a.kind == 'count.mismatch' && DateTime.now().difference(a.at).inHours < 24)) {
+        m['ac${a.id}'] = ('Piece count did not match', a.text);
+      }
+    }
+    if (staffUser != null) {
+      for (final n in d.noticesFor(me, staffUser!.branchId).where((n) => !n.readBy.contains(me))) {
+        m['nt${n.id}'] = ('Notice from the boss', n.text);
+      }
+      for (final w in d.openWork(me)) {
+        m['wk${w.$1.id}#${w.$2}'] = ('New work for you', '${w.$1.code}: ${w.$1.lines[w.$2].garment} – ${w.$1.lines[w.$2].service}');
+      }
+      for (final o in d.orders.where((o) => o.open && (o.deliveryAgent == me || o.pickupAgent == me))) {
+        m['dl${o.id}${o.status}'] = (o.status == 'pickup' ? 'New pickup' : 'Delivery task', '${o.code} · ${d.customer(o.customerId)?.name ?? ''}');
+      }
+      for (final r in d.requests.where((r) => r.by == me && r.status != 'pending')) {
+        m['rs${r.id}${r.status}'] = ('Your request: ${r.status}', '${r.item}${r.reply.isEmpty ? '' : ' – ${r.reply}'}');
+      }
+    }
+    return m;
+  }
+
+  void _onRemote() {
+    final now = _alertKeys();
+    final seen = _seen;
+    _seen = now.keys.toSet();
+    if (seen == null) return; // first look: don't flood
+    for (final e in now.entries) {
+      if (!seen.contains(e.key)) NotifyService.instance.show(e.value.$1, e.value.$2);
+    }
+  }
+
+  /// Call when the shop is ready (after login) so old items don't notify.
+  void resetAlerts() => _seen = _alertKeys().keys.toSet();
 
   Future<void> setLang(String l) async {
     lang = l;
@@ -110,6 +172,8 @@ class AppState extends ChangeNotifier {
     owner = o;
     staffUser = null;
     await _openShop(o.uid);
+    resetAlerts();
+    if (shop != null && data != null) LicenseService.instance.sync(data!, shopName: shop!.shopName, phone: o.mobile);
     notifyListeners();
   }
 
@@ -124,6 +188,7 @@ class AppState extends ChangeNotifier {
     }
     if (!d.initialised) await d.initialise(s);
     if (sample && !d.hasSample) SampleData.fill(d, services: s.services);
+    LicenseService.instance.sync(d, shopName: s.shopName, phone: owner?.mobile ?? '');
     notifyListeners();
   }
 
@@ -177,6 +242,7 @@ class AppState extends ChangeNotifier {
     await p.setStringList(_kStaff, [shopOwnerUid, staffUser!.id]);
     data!.checkIn(staffUser!.id);
     _startTracking();
+    resetAlerts();
     notifyListeners();
     return null;
   }

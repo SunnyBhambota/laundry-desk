@@ -14,6 +14,7 @@ import '../widgets/ui.dart';
 import 'issue_screens.dart';
 import 'order_detail_screen.dart';
 import 'v08_screens.dart';
+import 'v09_screens.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -179,6 +180,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           label: Text(L(app, 'Complaint & wrong-delivery report', 'शिकायत और गलत डिलीवरी रिपोर्ट')),
         ),
         const SizedBox(height: 12),
+        RatingsCard(from: range.from, to: range.to),
         if (d.branches.length > 1 && app.isOwner && app.scopeBranch == null) ...[
           BranchCompareCard(range: range),
           const SizedBox(height: 12),

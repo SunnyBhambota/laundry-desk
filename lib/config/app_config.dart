@@ -4,7 +4,7 @@ class AppConfig {
 
   static const appName = 'LaundryCase';
   static const company = 'BrotriX Technologies';
-  static const version = '0.8.0';
+  static const version = '0.9.0';
 
   /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).
   /// If these are emptied the app runs in DEMO MODE (data only on this phone).
@@ -34,7 +34,9 @@ class AppConfig {
   };
 
   /// BrotriX admin screen (More → tap the version 7 times). Change before launch.
-  static const superAdminPin = '0000';
+  static const superAdminPin = '0000'; // old demo PIN – BrotriX admin is now an account (admins/{uid})
+  /// BrotriX sales WhatsApp number (digits with country code). Empty = show a message.
+  static const brotrixPhone = '';
 
   /// Free plan limits (after the trial, without a paid plan).
   static const freeMaxBranches = 1;

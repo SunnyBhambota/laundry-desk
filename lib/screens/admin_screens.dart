@@ -487,13 +487,10 @@ class PlansScreen extends StatelessWidget {
             const SizedBox(height: 12),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: LD.sun, foregroundColor: LD.navy, minimumSize: const Size.fromHeight(46)),
-              onPressed: AppConfig.enforcePremium
-                  ? () => toast(context, t('billingSoon'))
-                  : () {
-                      d.setPlan(id, months: 1);
-                      toast(context, '$name ✓');
-                    },
-              child: Text(AppConfig.enforcePremium ? t('choose') : t('testActivate')),
+              onPressed: () => AppConfig.brotrixPhone.isEmpty
+                  ? toast(context, L(app, 'Call / WhatsApp BrotriX Technologies to activate $name.', '$name चालू कराने के लिए BrotriX Technologies को कॉल / WhatsApp करें।'))
+                  : openWhatsApp(AppConfig.brotrixPhone, 'Namaste BrotriX, please activate $name for ${app.shop!.shopName} (code ${d.shopCode}).'),
+              child: Text(L(app, 'Activate via BrotriX', 'BrotriX से चालू कराएँ')),
             ),
           ],
         ]),

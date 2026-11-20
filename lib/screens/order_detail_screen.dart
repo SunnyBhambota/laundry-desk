@@ -14,6 +14,7 @@ import '../widgets/ui.dart';
 import 'live_map_screen.dart';
 import 'v08_screens.dart';
 import 'new_order_screen.dart';
+import 'v09_screens.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -99,12 +100,12 @@ class OrderDetailScreen extends StatelessWidget {
               }
             },
             itemBuilder: (_) => [
-              if (o.status != 'cancelled' && (app.canManage || (app.role == Role.counter && (o.status == 'received' || o.status == 'pickup'))))
+              if (o.status != 'cancelled' && app.can('editOrder') && (app.canManage || (app.role == Role.counter && (o.status == 'received' || o.status == 'pickup'))))
                 PopupMenuItem(value: 'edit', child: Text(L(app, 'Edit order', 'ऑर्डर बदलें'))),
               PopupMenuItem(value: 'bt', child: Text(L(app, 'Print on Bluetooth printer', 'ब्लूटूथ प्रिंटर पर प्रिंट'))),
               if (app.module('barcode')) PopupMenuItem(value: 'bttags', child: Text(L(app, 'Print tags on Bluetooth printer', 'ब्लूटूथ प्रिंटर पर टैग'))),
               if (o.due > 0) PopupMenuItem(value: 'upi', child: Text(L(app, 'Show UPI QR', 'UPI QR दिखाएँ'))),
-              if (app.canManage && o.paid > 0) PopupMenuItem(value: 'refund', child: Text(L(app, 'Refund', 'रिफ़ंड'))),
+              if ((app.canManage || app.role == Role.counter) && app.can('refund') && o.paid > 0) PopupMenuItem(value: 'refund', child: Text(L(app, 'Refund', 'रिफ़ंड'))),
               PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
               PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
               if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
@@ -112,7 +113,7 @@ class OrderDetailScreen extends StatelessWidget {
                 PopupMenuItem(value: 'repeat', child: Text(L(app, 'Repeat this order', 'यही ऑर्डर फिर से'))),
               if (app.canManage && o.open && d.branches.length > 1)
                 PopupMenuItem(value: 'move', child: Text(L(app, 'Move to another branch', 'दूसरी ब्रांच में भेजें'))),
-              if (app.canManage && o.open) PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder'))),
+              if ((app.canManage || app.role == Role.counter) && app.can('cancel') && o.open) PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder'))),
             ],
           ),
         ],
@@ -205,6 +206,10 @@ class OrderDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         OrderWorkCard(orderId: o.id),
+        const SizedBox(height: 12),
+        OrderRatingCard(orderId: o.id),
+        if (o.status == 'delivered') const SizedBox(height: 12),
+        OrderPhotosCard(orderId: o.id),
         const SizedBox(height: 12),
         // details
         SectionCard(

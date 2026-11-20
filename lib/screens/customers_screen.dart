@@ -11,6 +11,7 @@ import 'new_order_screen.dart';
 import 'v04_screens.dart';
 import 'orders_screen.dart';
 import 'live_map_screen.dart';
+import 'v09_screens.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -37,7 +38,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final totalDue = d.customers.fold<double>(0, (s, c) => s + d.dueOf(c.id));
 
     return Scaffold(
-      appBar: AppBar(title: Text(t('customers'))),
+      appBar: AppBar(title: Text(t('customers')), actions: [
+        if (app.role != Role.washer && app.role != Role.delivery)
+          TextButton.icon(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerGroupsScreen())),
+            icon: const Icon(Icons.groups_2_outlined, size: 18),
+            label: Text(L(app, 'Groups', 'ग्रुप')),
+          ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => customerForm(context, app),
         icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -133,7 +141,7 @@ class CustomerDetailScreen extends StatelessWidget {
         title: Text(c.name),
         actions: [
           IconButton(tooltip: t('edit'), onPressed: () => customerForm(context, app, edit: c), icon: const Icon(Icons.edit_outlined)),
-          if (app.isOwner)
+          if (app.isOwner || app.can('deleteCustomer'))
             IconButton(
               tooltip: L(app, 'Delete customer', 'ग्राहक हटाएँ'),
               icon: const Icon(Icons.delete_outline),
@@ -180,6 +188,8 @@ class CustomerDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         CustomerExtrasCard(customerId: c.id),
+        const SizedBox(height: 12),
+        CustomerMoreCard(customerId: c.id),
         const SizedBox(height: 12),
         Row(children: [
           stat(t('orders'), '${orders.length}'),

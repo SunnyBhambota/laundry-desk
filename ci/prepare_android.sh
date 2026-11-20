@@ -23,7 +23,12 @@ for st in android/app/src/main/res/values/styles.xml android/app/src/main/res/va
   [ -f "$st" ] && sed -i 's/parent="@android:style\/Theme.Light.NoTitleBar"/parent="Theme.AppCompat.Light.NoActionBar"/; s/parent="@android:style\/Theme.Black.NoTitleBar"/parent="Theme.AppCompat.NoActionBar"/' "$st"
 done
 grep -n "parent=" android/app/src/main/res/values/styles.xml || true
-printf '\ndependencies {\n    implementation("androidx.appcompat:appcompat:1.7.0")\n}\n' >> "$F"
+printf '\ndependencies {\n    implementation("androidx.appcompat:appcompat:1.7.0")\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n' >> "$F"
+# flutter_local_notifications needs Java 8+ API desugaring
+if grep -q "compileOptions {" "$F"; then
+  sed -i '0,/compileOptions {/s//compileOptions {\n        isCoreLibraryDesugaringEnabled = true/' "$F"
+fi
+grep -n "Desugaring\|desugar" "$F"
 grep -n "minSdk" "$F"
 grep -n "label\|queries\|permission" "$M"
 

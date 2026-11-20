@@ -309,12 +309,13 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               },
             ),
             const SizedBox(height: 6),
-            TextField(
-              controller: _discount,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: fieldDeco(t('discount'), icon: Icons.local_offer_outlined),
-              onChanged: (_) => setState(() {}),
-            ),
+            if (app.can('discount'))
+              TextField(
+                controller: _discount,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: fieldDeco(t('discount'), icon: Icons.local_offer_outlined),
+                onChanged: (_) => setState(() {}),
+              ),
             const SizedBox(height: 10),
             TextField(controller: _notes, decoration: fieldDeco(t('notes'), icon: Icons.sticky_note_2_outlined)),
             const SizedBox(height: 10),
@@ -590,6 +591,9 @@ Future<Customer?> customerForm(BuildContext context, AppState app, {String prefi
   final phone = TextEditingController(text: edit?.phone ?? (isNum ? prefill : ''));
   final addr = TextEditingController(text: edit?.address ?? '');
   var type = edit?.type ?? 'regular';
+  DateTime? dob = edit?.dob;
+  String referredBy = edit?.referredBy ?? '';
+  final d = app.data!;
   return sheet<Customer>(context, edit == null ? t('addCustomer') : t('edit'), (c) {
     return StatefulBuilder(builder: (c, set) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -602,6 +606,30 @@ Future<Customer?> customerForm(BuildContext context, AppState app, {String prefi
         Wrap(spacing: 8, children: [
           for (final ty in ['regular', 'vip', 'business']) Pill(label: t('type.$ty'), on: type == ty, onTap: () => set(() => type = ty)),
         ]),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            child: TextButton.icon(
+              onPressed: () async {
+                final p = await showDatePicker(context: c, initialDate: dob ?? DateTime(1990, 1, 1), firstDate: DateTime(1930), lastDate: DateTime.now());
+                if (p != null) set(() => dob = p);
+              },
+              icon: const Icon(Icons.cake_outlined, size: 18),
+              label: Text(dob == null ? L(app, 'Birthday (optional)', 'जन्मदिन (ज़रूरी नहीं)') : dmy(dob!)),
+            ),
+          ),
+          if (edit == null || edit.referredBy.isEmpty)
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () async {
+                  final p = await pickCustomer(c, app);
+                  if (p != null && p.id != edit?.id) set(() => referredBy = p.id);
+                },
+                icon: const Icon(Icons.group_add_outlined, size: 18),
+                label: Text(referredBy.isEmpty ? L(app, 'Referred by…', 'किसने भेजा…') : (d.customer(referredBy)?.name ?? ''), overflow: TextOverflow.ellipsis),
+              ),
+            ),
+        ]),
         const SizedBox(height: 14),
         FilledButton(
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
@@ -613,11 +641,20 @@ Future<Customer?> customerForm(BuildContext context, AppState app, {String prefi
                 ..name = name.text.trim()
                 ..phone = digits
                 ..address = addr.text.trim()
-                ..type = type;
+                ..type = type
+                ..dob = dob
+                ..referredBy = edit.referredBy.isEmpty ? referredBy : edit.referredBy;
               app.data!.updateCustomer(edit);
               Navigator.pop(c, edit);
             } else {
-              Navigator.pop(c, app.data!.addCustomer(name: name.text, phone: digits, address: addr.text, type: type));
+              final nc = app.data!.addCustomer(name: name.text, phone: digits, address: addr.text, type: type);
+              if (dob != null || referredBy.isNotEmpty) {
+                nc
+                  ..dob = dob
+                  ..referredBy = referredBy;
+                app.data!.updateCustomer(nc);
+              }
+              Navigator.pop(c, nc);
             }
           },
           child: Text(t('save')),

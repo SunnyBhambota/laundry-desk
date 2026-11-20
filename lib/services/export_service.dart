@@ -321,6 +321,65 @@ class ExportService {
           ],
       ]);
 
+  /// Monthly statement for a business / credit customer: every order and payment of the month.
+  static Future<Uint8List> statementPdf({required ShopProfile shop, required ShopData data, required Customer c, required DateTime from, required DateTime to}) async {
+    final cur = shop.currency;
+    final orders = data.orders.where((o) => o.customerId == c.id && o.status != 'cancelled' && !o.createdAt.isBefore(from) && o.createdAt.isBefore(to)).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final billed = orders.fold<double>(0, (s, o) => s + o.total);
+    var paidIn = 0.0;
+    for (final o in data.orders.where((o) => o.customerId == c.id)) {
+      for (final p in o.payments) {
+        if (!p.at.isBefore(from) && p.at.isBefore(to)) paidIn += p.amount;
+      }
+    }
+    final due = data.dueOf(c.id);
+    final doc = pw.Document(title: 'Statement ${c.name}', author: shop.shopName);
+    doc.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build: (_) => [
+        pw.Text(shop.shopName, style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: _navy)),
+        if (shop.address.isNotEmpty) pw.Text(shop.address, style: const pw.TextStyle(color: _slate)),
+        pw.SizedBox(height: 10),
+        pw.Text('Statement: ${c.name} (+${c.phone})', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+        pw.Text('${dmy(from)} to ${dmy(to.subtract(const Duration(days: 1)))}', style: const pw.TextStyle(color: _slate)),
+        pw.SizedBox(height: 10),
+        pw.TableHelper.fromTextArray(
+          headers: ['Date', 'Order', 'Items', 'Pieces', 'Amount', 'Paid'],
+          data: [
+            for (final o in orders)
+              [dmy(o.createdAt), o.code, o.lines.map((l) => '${l.garment} x${l.qty.toStringAsFixed(l.unit == 'kg' ? 1 : 0)}').join(', '), '${o.pieces}', _m(o.total, cur), _m(o.paid, cur)],
+          ],
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+          cellStyle: const pw.TextStyle(fontSize: 8.5),
+          headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE6EEFC)),
+          columnWidths: {2: const pw.FlexColumnWidth(3)},
+        ),
+        pw.SizedBox(height: 12),
+        pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
+          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+            pw.Text('Billed this period: ${_m(billed, cur)}'),
+            pw.Text('Paid this period: ${_m(paidIn, cur)}'),
+            pw.SizedBox(height: 4),
+            pw.Text('Total pending now: ${_m(due, cur)}', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _navy)),
+          ]),
+        ]),
+        if (data.upiId.isNotEmpty && due > 0) ...[
+          pw.SizedBox(height: 14),
+          pw.Row(children: [
+            pw.BarcodeWidget(barcode: pw.Barcode.qrCode(), data: data.upiAmountLink(due, shop.shopName, 'Statement ${c.name}'), width: 90, height: 90),
+            pw.SizedBox(width: 10),
+            pw.Text('Scan to pay by UPI\n${data.upiId}'),
+          ]),
+        ],
+        pw.SizedBox(height: 18),
+        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 8, color: _slate)),
+      ],
+    ));
+    return doc.save();
+  }
+
   static Future<Uint8List> payslipPdf({required ShopProfile shop, required ShopData data, required Payslip p}) async {
     final cur = shop.currency;
     final doc = pw.Document(title: 'Salary slip ${p.staff.name} ${p.month}', author: shop.shopName);

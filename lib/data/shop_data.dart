@@ -55,6 +55,7 @@ class ShopData extends ChangeNotifier {
   double dailyTarget = 0; // sales target per day (whole shop or per branch below)
   int dailyOrderTarget = 0;
   bool autoAssign = false; // give new order lines to washers by their skills
+  double referralPoints = 50; // points to both customers when a referred customer's first order is delivered
   /// Loyalty: points per ₹100, value of 1 point, minimum points to redeem (0 per100 = off).
   double pointsPer100 = 1;
   double pointValue = 1;
@@ -115,7 +116,11 @@ class ShopData extends ChangeNotifier {
   }
 
   /// Called by CloudSync when another phone changed something.
+  /// Set by AppState: called after another phone changed something (for notifications).
+  VoidCallback? onRemote;
+
   void remoteChanged() {
+    onRemote?.call();
     // owner phone books staff "used" entries into stock (once each)
     if ((sync?.admin ?? true) && applyStockUses()) {
       Future.microtask(changed);
@@ -141,6 +146,7 @@ class ShopData extends ChangeNotifier {
         'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
         'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
         'autoAssign': autoAssign,
+        'referralPoints': referralPoints,
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -170,6 +176,7 @@ class ShopData extends ChangeNotifier {
       dailyOrderTarget = (t['orders'] as num?)?.toInt() ?? dailyOrderTarget;
     }
     autoAssign = j['autoAssign'] as bool? ?? autoAssign;
+    referralPoints = (j['referralPoints'] as num?)?.toDouble() ?? referralPoints;
   }
 
   void _loyalty(Object? l) {
@@ -315,6 +322,7 @@ class ShopData extends ChangeNotifier {
         'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
         'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
         'autoAssign': autoAssign,
+        'referralPoints': referralPoints,
         'notices': notices.map((e) => e.toJson()).toList(),
         'cashDays': cashDays.map((e) => e.toJson()).toList(),
         'coupons': coupons.map((e) => e.toJson()).toList(),
@@ -523,6 +531,14 @@ class ShopData extends ChangeNotifier {
       final c = customer(o.customerId);
       final earn = (o.total / 100).floorToDouble() * pointsPer100;
       if (c != null && earn > 0) c.points += earn;
+      // referral: first delivered order of a referred customer → points to both
+      if (c != null && c.referredBy.isNotEmpty && !c.referralPaid && referralPoints > 0) {
+        final ref = customer(c.referredBy);
+        c.points += referralPoints;
+        ref?.points += referralPoints;
+        c.referralPaid = true;
+        log(by, 'referral', text: '${c.name} ← ${ref?.name ?? ''} +${referralPoints.toStringAsFixed(0)}');
+      }
     }
     o.status = status;
     o.history.add(StatusEvent(status: status, at: DateTime.now(), by: by, note: note));
@@ -819,6 +835,15 @@ class ShopData extends ChangeNotifier {
     return true;
   }
 
+  /// upi://pay link for any amount (statements).
+  String upiAmountLink(double amount, String shopName, String note) {
+    final q = {'pa': upiId.trim(), 'pn': shopName, 'am': amount.toStringAsFixed(2), 'cu': 'INR', 'tn': note}
+        .entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    return 'upi://pay?$q';
+  }
+
   /// upi://pay link for the amount due (null when no UPI ID is set).
   String? upiLink(LaundryOrder o, String shopName) {
     if (upiId.trim().isEmpty || o.due <= 0) return null;
@@ -1005,6 +1030,82 @@ class ShopData extends ChangeNotifier {
   }
 
   /// Removes sample customers/orders/staff/expenses (keeps setup, rate card, branches you added).
+  // ---------- customers: groups, history, statement ----------
+
+  DateTime? lastVisit(String customerId) {
+    DateTime? last;
+    for (final o in orders) {
+      if (o.customerId == customerId && o.status != 'cancelled' && (last == null || o.createdAt.isAfter(last))) last = o.createdAt;
+    }
+    return last;
+  }
+
+  double spendOf(String customerId) => orders.where((o) => o.customerId == customerId && o.status != 'cancelled').fold(0.0, (s, o) => s + o.total);
+
+  /// group: away30 | away60 | vip | business | dues | birthday | top | new | low_rating
+  List<Customer> customerGroup(String group) {
+    final n = DateTime.now();
+    switch (group) {
+      case 'away30':
+      case 'away60':
+        final days = group == 'away30' ? 30 : 60;
+        return customers.where((c) {
+          final l = lastVisit(c.id);
+          return l != null && n.difference(l).inDays >= days;
+        }).toList();
+      case 'vip':
+      case 'business':
+        return customers.where((c) => c.type == group).toList();
+      case 'dues':
+        return customers.where((c) => dueOf(c.id) > 0.5).toList();
+      case 'birthday':
+        return customers.where((c) => c.dob != null && c.dob!.month == n.month).toList();
+      case 'top':
+        final l = [...customers]..sort((a, b) => spendOf(b.id).compareTo(spendOf(a.id)));
+        return l.take(20).toList();
+      case 'new':
+        return customers.where((c) => n.difference(c.createdAt).inDays <= 30).toList();
+      case 'low_rating':
+        final ids = {for (final o in orders) if (o.rating > 0 && o.rating <= 2) o.customerId};
+        return customers.where((c) => ids.contains(c.id)).toList();
+    }
+    return customers;
+  }
+
+  /// Every item this customer ever gave: newest first.
+  List<(LaundryOrder, OrderLine)> clothesHistory(String customerId) {
+    final l = <(LaundryOrder, OrderLine)>[];
+    for (final o in orders.where((o) => o.customerId == customerId)) {
+      for (final x in o.lines) {
+        l.add((o, x));
+      }
+    }
+    l.sort((a, b) => b.$1.createdAt.compareTo(a.$1.createdAt));
+    return l;
+  }
+
+  void rateOrder(LaundryOrder o, int stars, {required String by, String note = ''}) {
+    o.rating = stars.clamp(1, 5);
+    o.ratingNote = note.trim();
+    log(by, 'rating', orderId: o.id, text: '${o.code}: $stars★${note.isEmpty ? '' : ' $note'}');
+    changed();
+  }
+
+  // ---------- staff permissions ----------
+
+  static const permKeys = ['discount', 'refund', 'editOrder', 'cancel', 'deleteCustomer', 'expenses', 'reports', 'rates'];
+
+  static bool permDefault(Role r, String key) => switch (r) {
+        Role.owner || Role.manager => true,
+        Role.counter => key == 'discount' || key == 'editOrder',
+        _ => false,
+      };
+
+  bool can(Staff? s, String key) {
+    if (s == null) return true; // owner
+    return s.perms[key] ?? permDefault(s.role, key);
+  }
+
   // ---------- work assign (who washes / irons which clothes) ----------
 
   List<Staff> workersIn(String branchId) =>
