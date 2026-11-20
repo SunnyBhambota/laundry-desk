@@ -11,8 +11,9 @@ import 'order_detail_screen.dart';
 import '../services/thermal_printer.dart';
 
 class NewOrderScreen extends StatefulWidget {
-  const NewOrderScreen({super.key, this.customerId});
+  const NewOrderScreen({super.key, this.customerId, this.repeatOf});
   final String? customerId;
+  final String? repeatOf; // copy clothes of this order (repeat order)
 
   @override
   State<NewOrderScreen> createState() => _NewOrderScreenState();
@@ -42,6 +43,16 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
     super.initState();
     final app = context.read<AppState>();
     if (widget.customerId != null) _customer = app.data!.customer(widget.customerId!);
+    final old = widget.repeatOf == null ? null : app.data!.order(widget.repeatOf!);
+    if (old != null) {
+      _customer = app.data!.customer(old.customerId);
+      _branchId = old.branchId;
+      _home = old.homeDelivery;
+      for (final l in old.lines) {
+        final c = l.copy();
+        _lines.add(c);
+      }
+    }
   }
 
   @override
@@ -189,8 +200,8 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(hiName(app, l.garment), style: const TextStyle(fontWeight: FontWeight.w600)),
                           Text('${hiName(app, l.service)} · ${money(l.rate, cur)}', style: const TextStyle(fontSize: 12, color: LD.slate)),
-                          Text(l.note.isEmpty ? '+ ${t('itemNote')}' : '⚠ ${l.note}',
-                              style: TextStyle(fontSize: 11, color: l.note.isEmpty ? LD.primary : const Color(0xFFA8430F))),
+                          Text(l.note.isEmpty && l.details.isEmpty ? '+ ${t('itemNote')}' : [if (l.details.isNotEmpty) l.details, if (l.note.isNotEmpty) '⚠ ${l.note}'].join(' · '),
+                              style: TextStyle(fontSize: 11, color: l.note.isEmpty && l.details.isEmpty ? LD.primary : const Color(0xFFA8430F))),
                         ]),
                       ),
                     ),
@@ -371,8 +382,30 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
   void _noteFor(OrderLine l) {
     final t = context.read<AppState>().t;
     final ctrl = TextEditingController(text: l.note);
+    final color = TextEditingController(text: l.color);
+    final brand = TextEditingController(text: l.brand);
+    final care = TextEditingController(text: l.care);
+    final app = context.read<AppState>();
     sheet(context, l.garment, (c) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          TextField(controller: ctrl, autofocus: true, decoration: fieldDeco(t('itemNote'))),
+          Row(children: [
+            Expanded(child: TextField(controller: color, decoration: fieldDeco(L(app, 'Colour', 'रंग')))),
+            const SizedBox(width: 8),
+            Expanded(child: TextField(controller: brand, decoration: fieldDeco(L(app, 'Brand', 'ब्रांड')))),
+          ]),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, children: [
+            for (final x in ['White', 'Black', 'Blue', 'Red', 'Cream'])
+              ActionChip(label: Text(x), onPressed: () => color.text = x),
+          ]),
+          const SizedBox(height: 8),
+          TextField(controller: care, decoration: fieldDeco(L(app, 'Special care', 'खास ध्यान'))),
+          const SizedBox(height: 6),
+          Wrap(spacing: 6, children: [
+            for (final x in ['No dryer', 'Hand wash', 'Dry in shade', 'Low heat iron', 'Wash separately'])
+              ActionChip(label: Text(x), onPressed: () => care.text = care.text.isEmpty ? x : '${care.text}, $x'),
+          ]),
+          const SizedBox(height: 10),
+          TextField(controller: ctrl, decoration: fieldDeco(t('itemNote'))),
           const SizedBox(height: 8),
           Wrap(spacing: 6, children: [
             for (final s in ['Stain', 'Colour bleeds', 'Torn', 'Button missing', 'Delicate'])
@@ -381,7 +414,12 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
           const SizedBox(height: 12),
           FilledButton(
             onPressed: () {
-              setState(() => l.note = ctrl.text.trim());
+              setState(() {
+                l.note = ctrl.text.trim();
+                l.color = color.text.trim();
+                l.brand = brand.text.trim();
+                l.care = care.text.trim();
+              });
               Navigator.pop(c);
             },
             child: Text(t('save')),

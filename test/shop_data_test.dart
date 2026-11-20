@@ -373,5 +373,66 @@ void main() {
     d.clearSample();
     expect(d.requests.where((x) => x.by.startsWith('demo_')), isEmpty);
   });
+
+  test('v0.8: work assign, notices, leave, cash drawer, piece count, repeat copy', () async {
+    final d = ShopData('local_v08');
+    final shop = _shop();
+    await d.initialise(shop);
+    SampleData.fill(d, services: shop.services);
+    final main = d.branches.first.id;
+    final ravi = d.staff.firstWhere((x) => x.id == 'demo_s3');
+    expect(d.openWork(ravi.id), isNotEmpty);
+    // new order, auto assign by skills
+    d.autoAssign = true;
+    final c = d.customers.first;
+    final o = d.createOrder(customerId: c.id, branchId: main, lines: [
+      OrderLine(garment: 'Shirt', service: 'Dry clean', qty: 2, rate: 80),
+      OrderLine(garment: 'Saree', service: 'Dry clean', qty: 1, rate: 200),
+    ], by: 'owner');
+    expect(o.lines.every((l) => l.worker == ravi.id), isTrue);
+    d.lineWork(o, 0, 'doing', by: ravi.id);
+    expect(o.status, 'washing');
+    d.lineWork(o, 0, 'done', by: ravi.id);
+    expect(o.status, 'washing');
+    d.lineWork(o, 1, 'done', by: ravi.id);
+    expect(o.status, 'ready');
+    final n = DateTime.now();
+    expect(d.workDone(ravi.id, DateTime(n.year, n.month, n.day), n.add(const Duration(days: 1))).$1, greaterThanOrEqualTo(3));
+    // payslip counts finished lines once
+    final ps = buildPayslip(s: ravi, month: monthKey(n), orders: d.orders, activity: d.activity, attendance: d.attendance, issues: d.issues, payouts: d.payouts, rules: d.rules);
+    expect(ps.dry, greaterThanOrEqualTo(3));
+    // piece count
+    d.countOut(o, 2, by: 'owner');
+    expect(d.activity.any((a) => a.kind == 'count.mismatch' && a.orderId == o.id), isTrue);
+    // notices
+    final nt = d.addNotice('Hello team', by: 'owner');
+    expect(d.noticesFor(ravi.id, main).first.id, nt.id);
+    d.readNotice(nt, ravi.id);
+    d.readNotice(nt, ravi.id);
+    expect(nt.readBy, [ravi.id]);
+    // leave
+    final lv = d.addLeave(by: ravi.id, branchId: main, from: DateTime(n.year, n.month, 1), to: DateTime(n.year, n.month, 2));
+    expect(lv.leaveDays, 2);
+    d.decideRequest(lv, 'approved', by: 'owner');
+    expect(lv.open, isFalse);
+    expect(d.leaveDaysIn(ravi.id, monthKey(n)), 2);
+    // cash drawer
+    d.openDrawer(main, 1000, by: 'owner');
+    final before = d.expectedCash(main, n);
+    d.addPayment(o, 100, 'cash', by: 'owner');
+    expect(d.expectedCash(main, n), before + 100);
+    d.closeDrawer(main, before + 90, by: 'owner');
+    expect(d.cashDay(main, n).closing, before + 90);
+    // json round trips
+    expect(OrderLine.fromJson(o.lines.first.toJson()).worker, ravi.id);
+    expect(Notice.fromJson(nt.toJson()).readBy, [ravi.id]);
+    expect(CashDay.fromJson(d.cashDay(main, n).toJson()).opening, 1000);
+    expect(StaffRequest.fromJson(lv.toJson()).kind, 'leave');
+    expect(Staff.fromJson(ravi.toJson()).skills, ravi.skills);
+    final copy = o.lines.first.copy();
+    expect(copy.worker, isEmpty);
+    d.clearSample();
+    expect(d.notices.where((x) => x.id.startsWith('demo_')), isEmpty);
+  });
 }
 

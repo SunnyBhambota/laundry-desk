@@ -285,7 +285,14 @@ class StaffRequest {
     this.doneAt,
     this.doneBy = '',
     this.reply = '',
+    this.kind = 'item',
+    this.from,
+    this.to,
   });
+  final String kind; // item | leave
+  final DateTime? from; // leave: first day
+  final DateTime? to; // leave: last day
+  int get leaveDays => from == null ? 0 : (to ?? from!).difference(from!).inDays + 1;
   final String id;
   final String by; // staff id (or 'owner')
   final String branchId;
@@ -300,7 +307,7 @@ class StaffRequest {
   DateTime? doneAt;
   String doneBy;
   String reply;
-  bool get open => status == 'pending' || status == 'approved';
+  bool get open => status == 'pending' || (status == 'approved' && kind != 'leave');
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -317,6 +324,9 @@ class StaffRequest {
         'doneAt': doneAt?.toIso8601String(),
         'doneBy': doneBy,
         'reply': reply,
+        'kind': kind,
+        if (from != null) 'from': from!.toIso8601String(),
+        if (to != null) 'to': to!.toIso8601String(),
       };
   factory StaffRequest.fromJson(Map<String, dynamic> j) => StaffRequest(
         id: j['id'] as String,
@@ -333,6 +343,69 @@ class StaffRequest {
         doneAt: DateTime.tryParse(j['doneAt'] as String? ?? ''),
         doneBy: j['doneBy'] as String? ?? '',
         reply: j['reply'] as String? ?? '',
+        kind: j['kind'] as String? ?? 'item',
+        from: DateTime.tryParse(j['from'] as String? ?? ''),
+        to: DateTime.tryParse(j['to'] as String? ?? ''),
+      );
+}
+
+/// Owner / manager message to staff; staff tap "read".
+class Notice {
+  Notice({required this.id, required this.text, required this.by, required this.at, this.branchId = '', List<String>? readBy})
+      : readBy = readBy ?? [];
+  final String id;
+  final String text;
+  final String by;
+  final DateTime at;
+  final String branchId; // '' = all branches
+  final List<String> readBy;
+  Map<String, dynamic> toJson() => {'id': id, 'text': text, 'by': by, 'at': at.toIso8601String(), 'branchId': branchId, 'readBy': readBy};
+  factory Notice.fromJson(Map<String, dynamic> j) => Notice(
+        id: j['id'] as String,
+        text: j['text'] as String? ?? '',
+        by: j['by'] as String? ?? '',
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        branchId: j['branchId'] as String? ?? '',
+        readBy: ((j['readBy'] as List?) ?? []).map((e) => '$e').toList(),
+      );
+}
+
+/// Cash drawer of one branch for one day: opening cash, counted closing cash.
+class CashDay {
+  CashDay({required this.id, required this.branchId, required this.day, this.opening = 0, this.openedBy = '', this.openedAt, this.closing, this.closedBy = '', this.closedAt, this.note = ''});
+  final String id; // <branchId>_<day>
+  final String branchId;
+  final String day; // yyyy-mm-dd
+  double opening;
+  String openedBy;
+  DateTime? openedAt;
+  double? closing; // counted at night
+  String closedBy;
+  DateTime? closedAt;
+  String note;
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'branchId': branchId,
+        'day': day,
+        'opening': opening,
+        'openedBy': openedBy,
+        'openedAt': openedAt?.toIso8601String(),
+        'closing': closing,
+        'closedBy': closedBy,
+        'closedAt': closedAt?.toIso8601String(),
+        'note': note,
+      };
+  factory CashDay.fromJson(Map<String, dynamic> j) => CashDay(
+        id: j['id'] as String,
+        branchId: j['branchId'] as String? ?? '',
+        day: j['day'] as String? ?? '',
+        opening: (j['opening'] as num?)?.toDouble() ?? 0,
+        openedBy: j['openedBy'] as String? ?? '',
+        openedAt: DateTime.tryParse(j['openedAt'] as String? ?? ''),
+        closing: (j['closing'] as num?)?.toDouble(),
+        closedBy: j['closedBy'] as String? ?? '',
+        closedAt: DateTime.tryParse(j['closedAt'] as String? ?? ''),
+        note: j['note'] as String? ?? '',
       );
 }
 
@@ -393,6 +466,12 @@ class OrderLine {
     required this.rate,
     this.unit = 'pc',
     this.note = '',
+    this.color = '',
+    this.brand = '',
+    this.care = '',
+    this.worker = '',
+    this.work = '',
+    this.workAt,
   });
   String garment;
   String service;
@@ -400,11 +479,30 @@ class OrderLine {
   double rate;
   String unit;
   String note; // stain, colour, damage…
+  String color;
+  String brand;
+  String care; // "no dryer", "hand wash"…
+  String worker; // staff id doing this line (washer / ironer)
+  String work; // '' | doing | done
+  DateTime? workAt; // when started / finished
   double get amount => qty * rate;
   int get pieces => unit == 'pc' ? qty.round() : 1;
+  String get details => [color, brand, care].where((x) => x.isNotEmpty).join(' · ');
 
-  Map<String, dynamic> toJson() =>
-      {'garment': garment, 'service': service, 'qty': qty, 'rate': rate, 'unit': unit, 'note': note};
+  Map<String, dynamic> toJson() => {
+        'garment': garment,
+        'service': service,
+        'qty': qty,
+        'rate': rate,
+        'unit': unit,
+        'note': note,
+        if (color.isNotEmpty) 'color': color,
+        if (brand.isNotEmpty) 'brand': brand,
+        if (care.isNotEmpty) 'care': care,
+        if (worker.isNotEmpty) 'worker': worker,
+        if (work.isNotEmpty) 'work': work,
+        if (workAt != null) 'workAt': workAt!.toIso8601String(),
+      };
   factory OrderLine.fromJson(Map<String, dynamic> j) => OrderLine(
         garment: j['garment'] as String? ?? '',
         service: j['service'] as String? ?? '',
@@ -412,7 +510,15 @@ class OrderLine {
         rate: (j['rate'] as num?)?.toDouble() ?? 0,
         unit: j['unit'] as String? ?? 'pc',
         note: j['note'] as String? ?? '',
+        color: j['color'] as String? ?? '',
+        brand: j['brand'] as String? ?? '',
+        care: j['care'] as String? ?? '',
+        worker: j['worker'] as String? ?? '',
+        work: j['work'] as String? ?? '',
+        workAt: DateTime.tryParse(j['workAt'] as String? ?? ''),
       );
+
+  OrderLine copy() => OrderLine(garment: garment, service: service, qty: qty, rate: rate, unit: unit, note: note, color: color, brand: brand, care: care);
 }
 
 class Payment {
@@ -465,6 +571,7 @@ class LaundryOrder {
     this.pickupAgent = '',
     this.deliveryAgent = '',
     this.rack = '',
+    this.countOut,
     this.notes = '',
     this.createdBy = '',
     this.proof,
@@ -496,6 +603,7 @@ class LaundryOrder {
   String pickupAgent;
   String deliveryAgent;
   String rack;
+  int? countOut; // pieces counted at hand-over (null = not counted)
   String notes;
   String createdBy;
   Ping? proof; // where the order was handed over (delivery proof)
@@ -552,6 +660,7 @@ class LaundryOrder {
         'pickupAgent': pickupAgent,
         'deliveryAgent': deliveryAgent,
         'rack': rack,
+        if (countOut != null) 'countOut': countOut,
         'notes': notes,
         'createdBy': createdBy,
         'proof': proof?.toJson(),
@@ -583,6 +692,7 @@ class LaundryOrder {
         pickupAgent: j['pickupAgent'] as String? ?? '',
         deliveryAgent: j['deliveryAgent'] as String? ?? '',
         rack: j['rack'] as String? ?? '',
+        countOut: (j['countOut'] as num?)?.toInt(),
         notes: j['notes'] as String? ?? '',
         createdBy: j['createdBy'] as String? ?? '',
         proof: j['proof'] is Map ? Ping.fromJson(Map<String, dynamic>.from(j['proof'] as Map)) : null,
@@ -608,12 +718,21 @@ class Staff {
     required this.pinHash,
     this.salary = 0,
     this.active = true,
-  });
+    List<String>? skills,
+    this.shiftStart = '',
+    this.shiftEnd = '',
+    Map<String, bool>? perms,
+  })  : skills = skills ?? [],
+        perms = perms ?? {};
   final String id;
   String name;
   String phone;
   Role role;
   String branchId;
+  List<String> skills; // services this person does (for auto work assign)
+  String shiftStart; // "09:30"
+  String shiftEnd;
+  Map<String, bool> perms; // extra yes/no rights set by the owner (discount, refund, …)
   String pinHash; // sha256("<shopCode>:<last 10 digits of phone>:<pin>"), see staffKey()
   double salary;
   bool active;
@@ -633,6 +752,10 @@ class Staff {
         'pinHash': pinHash,
         'salary': salary,
         'active': active,
+        if (skills.isNotEmpty) 'skills': skills,
+        if (shiftStart.isNotEmpty) 'shiftStart': shiftStart,
+        if (shiftEnd.isNotEmpty) 'shiftEnd': shiftEnd,
+        if (perms.isNotEmpty) 'perms': perms,
       };
   factory Staff.fromJson(Map<String, dynamic> j) => Staff(
         id: j['id'] as String,
@@ -643,6 +766,10 @@ class Staff {
         pinHash: j['pinHash'] as String? ?? (j['pin'] is String ? 'plain:${j['pin']}' : ''),
         salary: (j['salary'] as num?)?.toDouble() ?? 0,
         active: j['active'] as bool? ?? true,
+        skills: ((j['skills'] as List?) ?? []).map((e) => '$e').toList(),
+        shiftStart: j['shiftStart'] as String? ?? '',
+        shiftEnd: j['shiftEnd'] as String? ?? '',
+        perms: ((j['perms'] as Map?) ?? {}).map((k, v) => MapEntry('$k', v == true)),
       );
 }
 

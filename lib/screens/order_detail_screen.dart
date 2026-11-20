@@ -12,6 +12,8 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'live_map_screen.dart';
+import 'v08_screens.dart';
+import 'new_order_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -71,6 +73,8 @@ class OrderDetailScreen extends StatelessWidget {
                 ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'Bill ${o.code}');
               } else if (v == 'tags') {
                 ExportService.printPdf(await ExportService.tagsPdf(shop: app.shop!, data: d, o: o), 'Tags ${o.code}');
+              } else if (v == 'repeat' && context.mounted) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => NewOrderScreen(repeatOf: o.id)));
               } else if (v == 'move' && context.mounted) {
                 sheet(context, L(app, 'Move order to branch', 'ऑर्डर दूसरी ब्रांच में भेजें'), (c) => Column(children: [
                       for (final b in d.branches.where((b) => b.id != o.branchId))
@@ -104,6 +108,8 @@ class OrderDetailScreen extends StatelessWidget {
               PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
               PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
               if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
+              if (app.role != Role.washer && app.role != Role.delivery)
+                PopupMenuItem(value: 'repeat', child: Text(L(app, 'Repeat this order', 'यही ऑर्डर फिर से'))),
               if (app.canManage && o.open && d.branches.length > 1)
                 PopupMenuItem(value: 'move', child: Text(L(app, 'Move to another branch', 'दूसरी ब्रांच में भेजें'))),
               if (app.canManage && o.open) PopupMenuItem(value: 'cancel', child: Text(t('cancelOrder'))),
@@ -197,6 +203,8 @@ class OrderDetailScreen extends StatelessWidget {
             if (o.due > 0 && o.status != 'cancelled') row(t('balance'), money(o.due, cur), bold: true, color: const Color(0xFF8A5A00)),
           ]),
         ),
+        const SizedBox(height: 12),
+        OrderWorkCard(orderId: o.id),
         const SizedBox(height: 12),
         // details
         SectionCard(
@@ -310,7 +318,8 @@ class OrderDetailScreen extends StatelessWidget {
                             final paid = await payDialog(context, o);
                             if (paid == null) return;
                           }
-                          d.setStatus(o, next!, by: app.actorId);
+                          if (!context.mounted) return;
+                          await changeStatusFlow(context, app, o, next!);
                         },
                         child: Text(t('nextStep').replaceAll('{s}', t(next ?? '')), maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),

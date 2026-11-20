@@ -14,6 +14,7 @@ import 'order_detail_screen.dart';
 import 'v04_screens.dart';
 import 'live_map_screen.dart';
 import 'v06_screens.dart';
+import 'v08_screens.dart';
 
 /// Owner/counter view: pickups and deliveries with the assigned person.
 class DeliveryBoardScreen extends StatelessWidget {
@@ -211,8 +212,9 @@ class TaskCard extends StatelessWidget {
                   final paid = await payDialog(context, order);
                   if (paid == null) return;
                 }
-                d.setStatus(order, 'delivered', by: app.actorId);
-                if (isAgent) TrackingService.instance.proof(d, order, app.actorId);
+                if (!context.mounted) return;
+                final ok = await changeStatusFlow(context, app, order, 'delivered');
+                if (ok && isAgent) TrackingService.instance.proof(d, order, app.actorId);
               },
               icon: const Icon(Icons.check_rounded, size: 18),
               label: Text(t('deliveredBtn')),
@@ -247,6 +249,7 @@ class MyTasksScreen extends StatelessWidget {
         ),
       ]),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
+        const NoticeBanner(),
         _DutyCard(),
         const SizedBox(height: 10),
         const StaffQuickRow(),
@@ -331,16 +334,21 @@ class QueueScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(t('queue'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
+        const NoticeBanner(),
         _DutyCard(),
         const SizedBox(height: 10),
         const StaffQuickRow(),
         const SizedBox(height: 10),
+        const MyWorkScreen(),
+        const SizedBox(height: 6),
         const MyEarningsCard(),
         const SizedBox(height: 12),
         for (final i in d.issues.where((i) => i.open && i.kind == 'complaint' && (i.stage == 'received' || i.stage == 'washing'))) ...[
           IssueTile(issue: i),
           const SizedBox(height: 10),
         ],
+        Text(L(app, 'All orders in the queue', 'क्यू के सारे ऑर्डर'), style: heading(15, weight: FontWeight.w700)),
+        const SizedBox(height: 8),
         if (list.isEmpty) EmptyState(icon: Icons.local_laundry_service_outlined, text: t('noTasks')),
         for (final o in list) ...[
           Container(
@@ -361,7 +369,7 @@ class QueueScreen extends StatelessWidget {
               const SizedBox(height: 10),
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: o.status == 'received' ? LD.primary : LD.success, minimumSize: const Size.fromHeight(46)),
-                onPressed: () => d.setStatus(o, o.status == 'received' ? 'washing' : 'ready', by: app.actorId),
+                onPressed: () => o.status == 'received' ? d.setStatus(o, 'washing', by: app.actorId) : changeStatusFlow(context, app, o, 'ready'),
                 child: Text(o.status == 'received' ? t('startWash') : t('markReady')),
               ),
             ]),

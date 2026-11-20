@@ -33,6 +33,7 @@ import 'package:laundry_desk/screens/staff_screen.dart';
 import 'package:laundry_desk/screens/v03_screens.dart';
 import 'package:laundry_desk/screens/v04_screens.dart';
 import 'package:laundry_desk/screens/v06_screens.dart';
+import 'package:laundry_desk/screens/v08_screens.dart';
 import 'package:laundry_desk/state/app_state.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -259,6 +260,9 @@ void main() {
       await visit('$tag stock', const StockScreen());
       await visit('$tag requests', const RequestsScreen());
       await visit('$tag stock used', const StockUseScreen());
+      await visit('$tag work board', const WorkBoardScreen());
+      await visit('$tag notices', const NoticeBoardScreen());
+      await visit('$tag audit', const AuditScreen());
       await visit('$tag booking qr', const BookingQrScreen());
       await visit('$tag expenses', const ExpensesScreen());
       await visit('$tag branches', const BranchesScreen());

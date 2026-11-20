@@ -20,6 +20,7 @@ import 'reports_screen.dart';
 import 'staff_screen.dart';
 import 'v03_screens.dart';
 import 'v06_screens.dart';
+import 'v08_screens.dart';
 
 /// Owner / manager / counter home (canvas: "Owner – Admin dashboard").
 class DashboardScreen extends StatelessWidget {
@@ -235,6 +236,8 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 );
               }),
+              const TargetCard(),
+              if (!app.isOwner) const Padding(padding: EdgeInsets.only(top: 12), child: NoticeBanner()),
               if (app.canManage && d.pendingRequests.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -315,7 +318,12 @@ class DashboardScreen extends StatelessWidget {
                     quick(Icons.receipt_outlined, t('expenses'), () => go(const ExpensesScreen())),
                     quick(Icons.groups_outlined, t('staff'), () => go(const StaffScreen())),
                     quick(Icons.list_alt_rounded, t('qRates'), () => go(const RateCardScreen())),
+                    quick(Icons.engineering_outlined, L(app, 'Work board', 'काम बोर्ड'), () => go(const WorkBoardScreen())),
+                    quick(Icons.point_of_sale_outlined, L(app, 'Cash drawer', 'कैश ड्रॉअर'), () => go(const DayCloseScreen())),
+                    quick(Icons.campaign_outlined, L(app, 'Notices', 'नोटिस'), () => go(const NoticeBoardScreen())),
+                    quick(Icons.manage_search_rounded, L(app, 'Who changed', 'किसने बदला'), () => go(const AuditScreen())),
                   ],
+                  if (app.role == Role.counter) quick(Icons.point_of_sale_outlined, L(app, 'Cash drawer', 'कैश ड्रॉअर'), () => go(const DayCloseScreen())),
                 ],
               ),
               const SizedBox(height: 16),

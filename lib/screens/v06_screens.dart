@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/branch_switch.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
+import 'v08_screens.dart';
 
 /// Things staff often ask for (quick chips in the request form).
 const commonNeeds = ['Hanger', 'Iron / istri', 'Washing powder', 'Detergent liquid', 'Poly cover', 'Tag roll', 'Starch', 'Stain remover', 'Bill roll', 'Soap'];
@@ -23,7 +24,7 @@ Color _statusColor(String s) => switch (s) {
 
 String _statusText(AppState app, String s) => switch (s) {
       'pending' => L(app, 'Waiting', 'इंतज़ार'),
-      'approved' => L(app, 'Approved – coming', 'मंज़ूर – आ रहा है'),
+      'approved' => L(app, 'Approved', 'मंज़ूर'),
       'given' => L(app, 'Given', 'दे दिया'),
       _ => L(app, 'Rejected', 'मना'),
     };
@@ -55,7 +56,24 @@ class RequestsScreen extends StatelessWidget {
         );
 
     final fab = FloatingActionButton.extended(
-      onPressed: () => newRequestSheet(context, app),
+      onPressed: () => sheet(context, L(app, 'What do you want to ask?', 'क्या माँगना है?'), (c) => Column(children: [
+            ListTile(
+              leading: const Icon(Icons.shopping_bag_outlined, color: LD.primary),
+              title: Text(L(app, 'Something for work (hanger, iron, powder…)', 'काम की चीज़ (हैंगर, इस्त्री, पाउडर…)')),
+              onTap: () {
+                Navigator.pop(c);
+                newRequestSheet(context, app);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.beach_access_outlined, color: Color(0xFF8A5A00)),
+              title: Text(L(app, 'Leave (chhutti)', 'छुट्टी')),
+              onTap: () {
+                Navigator.pop(c);
+                leaveSheet(context, app);
+              },
+            ),
+          ])),
       icon: const Icon(Icons.add),
       label: Text(L(app, 'New request', 'नई रिक्वेस्ट')),
     );
@@ -113,7 +131,13 @@ class RequestTile extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           if (r.urgent) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.priority_high_rounded, color: Color(0xFFB42318), size: 20)),
-          Expanded(child: Text('${r.item} · ${_q(r.qty)} ${r.unit}', style: heading(16, weight: FontWeight.w700))),
+          Expanded(
+            child: Text(
+                r.kind == 'leave'
+                    ? '${L(app, 'Leave', 'छुट्टी')}: ${dmy(r.from!)}${r.leaveDays > 1 ? ' – ${dmy(r.to!)}' : ''} (${r.leaveDays} ${L(app, 'days', 'दिन')})'
+                    : '${r.item} · ${_q(r.qty)} ${r.unit}',
+                style: heading(16, weight: FontWeight.w700)),
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(color: c.withValues(alpha: .12), borderRadius: BorderRadius.circular(99)),
@@ -147,6 +171,7 @@ class RequestTile extends StatelessWidget {
                 icon: const Icon(Icons.check, size: 18),
                 label: Text(L(app, 'Approve', 'मंज़ूर')),
               ),
+            if (r.kind != 'leave')
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: LD.success),
               onPressed: () => _giveSheet(context, app, r),

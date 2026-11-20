@@ -4,7 +4,7 @@ class AppConfig {
 
   static const appName = 'LaundryCase';
   static const company = 'BrotriX Technologies';
-  static const version = '0.7.0';
+  static const version = '0.8.0';
 
   /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).
   /// If these are emptied the app runs in DEMO MODE (data only on this phone).

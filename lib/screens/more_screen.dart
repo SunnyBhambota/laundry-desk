@@ -18,6 +18,7 @@ import 'v04_screens.dart';
 import '../data/issue_models.dart';
 import 'reports_screen.dart';
 import 'v06_screens.dart';
+import 'v08_screens.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -120,7 +121,11 @@ class _MoreScreenState extends State<MoreScreen> {
           ]),
         if (app.role == Role.washer || app.role == Role.delivery)
           group([
-            tile(Icons.campaign_outlined, app.canManage ? L(app, 'Staff requests', 'स्टाफ की माँग') : L(app, 'Ask the boss (hanger, iron…)', 'बॉस से माँगें (हैंगर, इस्त्री…)'),
+            tile(Icons.campaign_outlined, L(app, 'Notice board', 'नोटिस बोर्ड'), () => go(const NoticeBoardScreen())),
+            if (app.canManage) tile(Icons.engineering_outlined, L(app, 'Work board (who does what)', 'काम बोर्ड (कौन क्या कर रहा)'), () => go(const WorkBoardScreen())),
+            if (app.canManage) tile(Icons.manage_search_rounded, L(app, 'Who changed what', 'किसने क्या बदला'), () => go(const AuditScreen())),
+            if (app.isOwner) tile(Icons.flag_outlined, L(app, 'Daily target', 'रोज़ का टारगेट'), () => targetSheet(context, app)),
+            tile(Icons.inbox_outlined, app.canManage ? L(app, 'Staff requests & leave', 'स्टाफ की माँग और छुट्टी') : L(app, 'Ask the boss (things / leave)', 'बॉस से माँगें (चीज़ / छुट्टी)'),
                 () => go(const RequestsScreen()),
                 sub: app.canManage && d.pendingRequests.isNotEmpty ? '${d.pendingRequests.length} ${L(app, 'waiting', 'इंतज़ार में')}' : null),
             if (!app.isOwner && app.module('stock')) tile(Icons.water_drop_outlined, L(app, 'Stock used (powder…)', 'स्टॉक इस्तेमाल (पाउडर…)'), () => go(const StockUseScreen())),

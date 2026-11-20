@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
+import 'v08_screens.dart';
 
 // ---------------- edit order + refund ----------------
 
@@ -308,7 +309,8 @@ class _ScanScreenState extends State<ScanScreen> {
                               final paid = await payDialog(context, o);
                               if (paid == null) return;
                             }
-                            d.setStatus(o, next!, by: app.actorId);
+                            if (!context.mounted) return;
+                            await changeStatusFlow(context, app, o, next!);
                           },
                           child: Text('→ ${app.t(next!)}', maxLines: 1, overflow: TextOverflow.ellipsis),
                         ),

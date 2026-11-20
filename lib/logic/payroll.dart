@@ -84,7 +84,7 @@ Payslip buildPayslip({
     for (final h in o.history) {
       if (h.by != s.id || !_inMonth(h.at, month)) continue;
       if (h.status == 'washing') {
-        for (final l in o.lines) {
+        for (final l in o.lines.where((l) => l.worker.isEmpty)) {
           if (l.unit == 'kg') {
             p.kg += l.qty;
           } else if (l.service == 'Dry clean') {
@@ -101,6 +101,19 @@ Payslip buildPayslip({
     }
     for (final pay in o.payments) {
       if (pay.by == s.id && _inMonth(pay.at, month)) p.collected += pay.amount;
+    }
+    // lines given to this person and finished this month
+    for (final l in o.lines) {
+      if (l.worker != s.id || l.work != 'done' || l.workAt == null || !_inMonth(l.workAt!, month)) continue;
+      if (l.unit == 'kg') {
+        p.kg += l.qty;
+      } else if (l.service == 'Dry clean') {
+        p.dry += l.pieces;
+      } else if (l.service == 'Steam iron') {
+        p.iron += l.pieces;
+      } else {
+        p.wash += l.pieces;
+      }
     }
   }
   for (final i in issues) {

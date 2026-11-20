@@ -13,6 +13,7 @@ import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'issue_screens.dart';
 import 'order_detail_screen.dart';
+import 'v08_screens.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -405,6 +406,25 @@ class _DayCloseScreenState extends State<DayCloseScreen> {
               onPressed: dayKey(_day) == dayKey(DateTime.now()) ? null : () => setState(() => _day = _day.add(const Duration(days: 1))),
               icon: const Icon(Icons.chevron_right)),
         ]),
+        if (dayKey(_day) == dayKey(DateTime.now())) ...[
+          CashDrawerCard(branchId: scope),
+          const SizedBox(height: 12),
+        ] else
+          for (final b in d.branches.where((b) => scope == null || b.id == scope))
+            if (d.cashDays.any((c) => c.id == '${b.id}_${dayKey(_day)}'))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Builder(builder: (_) {
+                  final c = d.cashDay(b.id, _day);
+                  final exp = d.expectedCash(b.id, _day);
+                  return SectionCard(
+                    title: '${L(app, 'Cash drawer', 'कैश ड्रॉअर')} · ${b.name}',
+                    child: Text(
+                        '${L(app, 'Opening', 'शुरुआत')} ${money(c.opening, cur)} · ${L(app, 'should be', 'होना चाहिए')} ${money(exp, cur)}'
+                        '${c.closing == null ? '' : ' · ${L(app, 'counted', 'गिना')} ${money(c.closing!, cur)} (${(c.closing! - exp) >= 0 ? '+' : ''}${(c.closing! - exp).toStringAsFixed(0)})'}'),
+                  );
+                }),
+              ),
         SectionCard(
           child: Column(children: [
             line(t('orders'), '${r.orderCount} · ${r.pieces} ${t('pcs')}'),

@@ -49,6 +49,12 @@ class ShopData extends ChangeNotifier {
   List<Supplier> suppliers = [];
   List<StaffRequest> requests = [];
   List<StockUse> stockUses = [];
+  List<Notice> notices = [];
+  List<CashDay> cashDays = [];
+  // v0.8 settings
+  double dailyTarget = 0; // sales target per day (whole shop or per branch below)
+  int dailyOrderTarget = 0;
+  bool autoAssign = false; // give new order lines to washers by their skills
   /// Loyalty: points per ₹100, value of 1 point, minimum points to redeem (0 per100 = off).
   double pointsPer100 = 1;
   double pointValue = 1;
@@ -133,6 +139,8 @@ class ShopData extends ChangeNotifier {
         'typeDiscount': typeDiscount,
         'upiId': upiId,
         'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
+        'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
+        'autoAssign': autoAssign,
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -152,6 +160,16 @@ class ShopData extends ChangeNotifier {
     }
     upiId = j['upiId'] as String? ?? upiId;
     _loyalty(j['loyalty']);
+    _targets(j);
+  }
+
+  void _targets(Map<String, dynamic> j) {
+    final t = j['targets'];
+    if (t is Map) {
+      dailyTarget = (t['sales'] as num?)?.toDouble() ?? dailyTarget;
+      dailyOrderTarget = (t['orders'] as num?)?.toInt() ?? dailyOrderTarget;
+    }
+    autoAssign = j['autoAssign'] as bool? ?? autoAssign;
   }
 
   void _loyalty(Object? l) {
@@ -295,6 +313,10 @@ class ShopData extends ChangeNotifier {
         'typeDiscount': typeDiscount,
         'upiId': upiId,
         'loyalty': {'per100': pointsPer100, 'value': pointValue, 'min': minRedeem},
+        'targets': {'sales': dailyTarget, 'orders': dailyOrderTarget},
+        'autoAssign': autoAssign,
+        'notices': notices.map((e) => e.toJson()).toList(),
+        'cashDays': cashDays.map((e) => e.toJson()).toList(),
         'coupons': coupons.map((e) => e.toJson()).toList(),
         'packagePlans': packagePlans.map((e) => e.toJson()).toList(),
         'stock': stock.map((e) => e.toJson()).toList(),
@@ -336,6 +358,9 @@ class ShopData extends ChangeNotifier {
     }
     upiId = j['upiId'] as String? ?? '';
     _loyalty(j['loyalty']);
+    _targets(j);
+    notices = list('notices').map(Notice.fromJson).toList();
+    cashDays = list('cashDays').map(CashDay.fromJson).toList();
     coupons = list('coupons').map(Coupon.fromJson).toList();
     packagePlans = list('packagePlans').map(PackagePlan.fromJson).toList();
     stock = list('stock').map(StockItem.fromJson).toList();
@@ -486,6 +511,7 @@ class ShopData extends ChangeNotifier {
     }
     if (advance > 0) o.payments.add(Payment(amount: advance, mode: advanceMode, at: now, by: by, note: 'advance'));
     orders.add(o);
+    if (autoAssign) autoAssignWork(o);
     log(by, 'order.new', orderId: o.id, text: o.code);
     if (advance > 0) log(by, 'pay', orderId: o.id, text: advance.toStringAsFixed(0));
     changed();
@@ -508,7 +534,7 @@ class ShopData extends ChangeNotifier {
   void addPayment(LaundryOrder o, double amount, String mode, {required String by, String note = ''}) {
     if (amount <= 0) return;
     o.payments.add(Payment(amount: amount, mode: mode, at: DateTime.now(), by: by, note: note));
-    log(by, 'pay', orderId: o.id, text: amount.toStringAsFixed(0));
+    log(by, 'pay', orderId: o.id, text: '${o.code}: ${amount.toStringAsFixed(0)} ($mode)');
     changed();
   }
 
@@ -588,7 +614,7 @@ class ShopData extends ChangeNotifier {
     if (discount != null) o.discount = discount;
     if (express != null) o.express = express;
     o.history.add(StatusEvent(status: 'edited', at: DateTime.now(), by: by, note: 'Total ${before.toStringAsFixed(0)} → ${o.total.toStringAsFixed(0)}'));
-    log(by, 'order.edit', orderId: o.id, text: o.code);
+    log(by, 'order.edit', orderId: o.id, text: '${o.code}: ${before.toStringAsFixed(0)} → ${o.total.toStringAsFixed(0)}');
     changed();
   }
 
@@ -597,7 +623,7 @@ class ShopData extends ChangeNotifier {
     if (amount <= 0) return;
     o.payments.add(Payment(amount: -amount, mode: mode, at: DateTime.now(), by: by, note: note.isEmpty ? 'refund' : 'refund: $note'));
     o.history.add(StatusEvent(status: 'refund', at: DateTime.now(), by: by, note: amount.toStringAsFixed(0)));
-    log(by, 'refund', orderId: o.id, text: amount.toStringAsFixed(0));
+    log(by, 'refund', orderId: o.id, text: '${o.code}: ${amount.toStringAsFixed(0)} ($mode)${note.isEmpty ? '' : ' – $note'}');
     changed();
   }
 
@@ -979,6 +1005,192 @@ class ShopData extends ChangeNotifier {
   }
 
   /// Removes sample customers/orders/staff/expenses (keeps setup, rate card, branches you added).
+  // ---------- work assign (who washes / irons which clothes) ----------
+
+  List<Staff> workersIn(String branchId) =>
+      staff.where((s) => s.active && (s.role == Role.washer || s.role == Role.manager) && (branchId.isEmpty || s.branchId == branchId)).toList();
+
+  /// Open (not done) lines given to a person: (order, line index).
+  List<(LaundryOrder, int)> openWork(String staffId) => [
+        for (final o in orders)
+          if (o.open && o.status != 'pickup')
+            for (var i = 0; i < o.lines.length; i++)
+              if (o.lines[i].worker == staffId && o.lines[i].work != 'done') (o, i),
+      ];
+
+  /// Lines nobody has yet (received / washing orders).
+  List<(LaundryOrder, int)> unassignedWork(String? branchId) => [
+        for (final o in orders)
+          if ((o.status == 'received' || o.status == 'washing') && (branchId == null || o.branchId == branchId))
+            for (var i = 0; i < o.lines.length; i++)
+              if (o.lines[i].worker.isEmpty) (o, i),
+      ];
+
+  int openPieces(String staffId) => openWork(staffId).fold(0, (s, w) => s + w.$1.lines[w.$2].pieces);
+
+  /// Gives each free line to a washer who has that service in skills (least busy first).
+  int autoAssignWork(LaundryOrder o) {
+    var n = 0;
+    for (final l in o.lines) {
+      if (l.worker.isNotEmpty) continue;
+      final ws = workersIn(o.branchId).where((w) => w.role == Role.washer).toList();
+      var pool = ws.where((w) => w.skills.contains(l.service)).toList();
+      if (pool.isEmpty) pool = ws.where((w) => w.skills.isEmpty).toList();
+      if (pool.isEmpty) continue;
+      pool.sort((a, b) => openPieces(a.id).compareTo(openPieces(b.id)));
+      l.worker = pool.first.id;
+      n++;
+    }
+    return n;
+  }
+
+  void assignLine(LaundryOrder o, int i, String staffId, {required String by}) {
+    final l = o.lines[i];
+    l.worker = staffId;
+    if (staffId.isEmpty) {
+      l.work = '';
+      l.workAt = null;
+    }
+    log(by, 'work.assign', orderId: o.id, text: '${o.code} ${l.garment} → ${staffId.isEmpty ? '-' : nameOf(staffId)}');
+    changed();
+  }
+
+  /// Start / finish one line. The order moves to "washing" on the first start
+  /// and to "ready" when every line is done.
+  void lineWork(LaundryOrder o, int i, String work, {required String by}) {
+    final l = o.lines[i];
+    if (l.worker.isEmpty) l.worker = by;
+    l.work = work;
+    l.workAt = DateTime.now();
+    log(by, 'work.$work', orderId: o.id, text: '${o.code} ${l.garment} ${qtyLabel(l)}');
+    if (o.status == 'received') {
+      o.status = 'washing';
+      o.history.add(StatusEvent(status: 'washing', at: DateTime.now(), by: by));
+    }
+    if (o.lines.every((x) => x.work == 'done') && (o.status == 'washing' || o.status == 'received')) {
+      o.status = 'ready';
+      o.history.add(StatusEvent(status: 'ready', at: DateTime.now(), by: by));
+      log(by, 'status.ready', orderId: o.id, text: o.code);
+    }
+    changed();
+  }
+
+  static String qtyLabel(OrderLine l) => l.unit == 'kg' ? '${l.qty.toStringAsFixed(1)} kg' : '${l.qty.toStringAsFixed(0)} pc';
+
+  /// Pieces / kg a person finished in [from, to).
+  (int, double) workDone(String staffId, DateTime from, DateTime to) {
+    var pcs = 0;
+    var kg = 0.0;
+    for (final o in orders) {
+      for (final l in o.lines) {
+        if (l.worker != staffId || l.work != 'done' || l.workAt == null || l.workAt!.isBefore(from) || !l.workAt!.isBefore(to)) continue;
+        if (l.unit == 'kg') {
+          kg += l.qty;
+        } else {
+          pcs += l.pieces;
+        }
+      }
+    }
+    return (pcs, kg);
+  }
+
+  // ---------- notices ----------
+
+  Notice addNotice(String text, {required String by, String branchId = ''}) {
+    final n = Notice(id: newId('nt'), text: text.trim(), by: by, at: DateTime.now(), branchId: branchId);
+    notices.add(n);
+    log(by, 'notice', text: n.text.length > 40 ? '${n.text.substring(0, 40)}…' : n.text);
+    changed();
+    return n;
+  }
+
+  List<Notice> noticesFor(String staffId, String branchId) =>
+      notices.where((n) => n.branchId.isEmpty || n.branchId == branchId).toList()..sort((a, b) => b.at.compareTo(a.at));
+
+  void readNotice(Notice n, String staffId) {
+    if (n.readBy.contains(staffId)) return;
+    n.readBy.add(staffId);
+    changed();
+  }
+
+  // ---------- leave ----------
+
+  StaffRequest addLeave({required String by, required String branchId, required DateTime from, required DateTime to, String note = ''}) {
+    final r = StaffRequest(
+        id: newId('lv'), kind: 'leave', by: by, branchId: branchId, item: 'Leave', qty: (to.difference(from).inDays + 1).toDouble(), unit: 'days',
+        note: note.trim(), at: DateTime.now(), from: DateTime(from.year, from.month, from.day), to: DateTime(to.year, to.month, to.day));
+    requests.add(r);
+    log(by, 'leave.new', text: '${dayKey(r.from!)} → ${dayKey(r.to!)}');
+    changed();
+    return r;
+  }
+
+  /// Approved leave days of a person in a month (yyyy-mm).
+  int leaveDaysIn(String staffId, String month) {
+    var n = 0;
+    for (final r in requests.where((r) => r.kind == 'leave' && r.by == staffId && (r.status == 'approved' || r.status == 'given') && r.from != null)) {
+      for (var d = r.from!; !d.isAfter(r.to ?? r.from!); d = d.add(const Duration(days: 1))) {
+        if (dayKey(d).startsWith(month)) n++;
+      }
+    }
+    return n;
+  }
+
+  // ---------- cash drawer ----------
+
+  CashDay cashDay(String branchId, DateTime day) {
+    final id = '${branchId}_${dayKey(day)}';
+    return cashDays.where((c) => c.id == id).firstOrNull ?? CashDay(id: id, branchId: branchId, day: dayKey(day));
+  }
+
+  void openDrawer(String branchId, double amount, {required String by}) {
+    final c = cashDay(branchId, DateTime.now());
+    c
+      ..opening = amount
+      ..openedBy = by
+      ..openedAt = DateTime.now();
+    if (!cashDays.contains(c)) cashDays.add(c);
+    log(by, 'cash.open', text: '${branch(branchId)?.name ?? ''}: ${amount.toStringAsFixed(0)}');
+    changed();
+  }
+
+  /// Cash that should be in the drawer: opening + cash taken − cash refunds − expenses of that day.
+  double expectedCash(String branchId, DateTime day) {
+    final c = cashDay(branchId, day);
+    final k = dayKey(day);
+    var cash = c.opening;
+    for (final o in orders.where((o) => o.branchId == branchId)) {
+      for (final p in o.payments) {
+        if (p.mode == 'cash' && dayKey(p.at) == k) cash += p.amount;
+      }
+    }
+    for (final e in expenses.where((e) => e.branchId == branchId && dayKey(e.at) == k)) {
+      cash -= e.amount;
+    }
+    return cash;
+  }
+
+  void closeDrawer(String branchId, double counted, {required String by, String note = ''}) {
+    final c = cashDay(branchId, DateTime.now());
+    c
+      ..closing = counted
+      ..closedBy = by
+      ..closedAt = DateTime.now()
+      ..note = note.trim();
+    if (!cashDays.contains(c)) cashDays.add(c);
+    final diff = counted - expectedCash(branchId, DateTime.now());
+    log(by, 'cash.close', text: '${branch(branchId)?.name ?? ''}: ${counted.toStringAsFixed(0)} (${diff >= 0 ? '+' : ''}${diff.toStringAsFixed(0)})');
+    changed();
+  }
+
+  // ---------- piece count at hand-over ----------
+
+  void countOut(LaundryOrder o, int counted, {required String by}) {
+    o.countOut = counted;
+    if (counted != o.pieces) log(by, 'count.mismatch', orderId: o.id, text: '${o.code}: $counted / ${o.pieces}');
+    changed();
+  }
+
   /// Removes demo records. Own records that point at demo branches/customers are kept and moved
   /// to the main branch so nothing real is lost. Returns how many records were removed.
   int clearSample() {
@@ -1015,6 +1227,8 @@ class ShopData extends ChangeNotifier {
     payouts.removeWhere((p) => demo(p.id) || demo(p.staffId));
     requests.removeWhere((r) => demo(r.id) || demo(r.by));
     stockUses.removeWhere((u) => demo(u.id) || demo(u.by));
+    notices.removeWhere((n) => demo(n.id));
+    cashDays.removeWhere((c) => demo(c.branchId) || demo(c.openedBy) || demo(c.closedBy));
     final after = customers.length + orders.length + staff.length + expenses.length + branches.length + attendance.length + activity.length +
         pings.length + issues.length + coupons.length + packagePlans.length + stock.length + stockMoves.length + suppliers.length + payouts.length;
     hasSample = false;

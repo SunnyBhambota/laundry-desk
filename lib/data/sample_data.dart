@@ -281,10 +281,42 @@ class SampleData {
       d.stockMoves.add(StockMove(id: 'demo_smu$i', itemId: 'demo_st1', qty: -1.75, at: now.subtract(Duration(days: i)), by: 'demo_s3'));
       d.stockMoves.add(StockMove(id: 'demo_smh$i', itemId: 'demo_st2', qty: -12, at: now.subtract(Duration(days: i)), by: i.isEven ? 'demo_s3' : 'demo_s1'));
     }
+    // v0.8: who does what, notices, cash drawer, target
+    d.staff.firstWhere((x) => x.id == 'demo_s3').skills = ['Wash & fold', 'Wash & iron', 'Dry clean'];
+    var given = 0;
+    for (final o in d.orders.where((o) => o.status == 'received' || o.status == 'washing')) {
+      for (final l in o.lines) {
+        if (o.branchId != main || given > 6) continue;
+        l.worker = 'demo_s3';
+        if (o.status == 'washing') {
+          l.work = 'doing';
+          l.workAt = now.subtract(const Duration(minutes: 40));
+        }
+        given++;
+      }
+    }
+    for (final o in d.orders.where((o) => (o.status == 'ready' || o.status == 'delivered') && o.branchId == main).take(12)) {
+      for (final l in o.lines) {
+        l
+          ..worker = 'demo_s3'
+          ..work = 'done'
+          ..workAt = o.timeOf('ready') ?? o.createdAt.add(const Duration(hours: 20));
+      }
+      if (o.status == 'ready' && o.rack.isEmpty) o.rack = 'R${(o.number % 6) + 1}';
+    }
+    d.notices.addAll([
+      Notice(id: 'demo_nt1', text: 'Sunday shop opens at 10 AM. Please keep all ready orders in racks by 9:30.', by: 'owner', at: now.subtract(const Duration(hours: 5)), readBy: ['demo_s1']),
+      Notice(id: 'demo_nt2', text: 'New rate for curtains from 1st. Check the rate card.', by: 'owner', at: now.subtract(const Duration(days: 2)), readBy: ['demo_s1', 'demo_s2', 'demo_s3']),
+    ]);
+    d.cashDays.add(CashDay(id: '${main}_${dayKey(now)}', branchId: main, day: dayKey(now), opening: 2000, openedBy: 'demo_s1', openedAt: DateTime(now.year, now.month, now.day, 9, 15)));
+    d.dailyTarget = 6000;
+    d.dailyOrderTarget = 15;
     d.requests.addAll([
       StaffRequest(id: 'demo_rq1', by: 'demo_s3', branchId: main, item: 'Hangers', itemId: 'demo_st2', qty: 100, unit: 'pc', note: 'Ready rack is full', urgent: true, at: now.subtract(const Duration(hours: 3))),
       StaffRequest(id: 'demo_rq2', by: 'demo_s3', branchId: main, item: 'Iron / istri', qty: 1, unit: 'pc', note: 'Steam iron 2 not heating', at: now.subtract(const Duration(hours: 20))),
       StaffRequest(id: 'demo_rq3', by: 'demo_s5', branchId: b2.id, item: 'Rain cover for bike bag', qty: 1, unit: 'pc', at: now.subtract(const Duration(days: 2)), status: 'approved', doneBy: 'owner', doneAt: now.subtract(const Duration(days: 1))),
+      StaffRequest(id: 'demo_lv1', kind: 'leave', by: 'demo_s4', branchId: main, item: 'Leave', qty: 2, unit: 'days', note: 'Sister\'s wedding', at: now.subtract(const Duration(hours: 6)),
+          from: DateTime(now.year, now.month, now.day).add(const Duration(days: 5)), to: DateTime(now.year, now.month, now.day).add(const Duration(days: 6))),
       StaffRequest(id: 'demo_rq4', by: 'demo_s2', branchId: b2.id, item: 'Bill roll', qty: 5, unit: 'roll', at: now.subtract(const Duration(days: 4)), status: 'given', doneBy: 'owner', doneAt: now.subtract(const Duration(days: 3)), reply: 'Kept in drawer'),
     ]);
     d.hasSample = true;
