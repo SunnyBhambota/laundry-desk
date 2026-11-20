@@ -13,6 +13,12 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
   App khulte hi band ho jaye to release nahi banta.
 - Pehli baar Android "unknown apps" ki permission maangega: Chrome ko allow karo.
 
+## v0.7 (20 Nov 2026, raat)
+- Staff ki maang: More → "Ask the boss" (hanger, iron, powder, kuch bhi; qty, urgent, note). Owner/manager: Dashboard card + "Staff requests" → Approve / Given (stock se ya khareed ke, kharche mein) / Reject (wajah). Staff ko status dikhta hai.
+- Stock used: staff "− Used" daalte hain, owner ke phone par stock mein ek hi baar katta hai. Stock → Report: mahine ka use, kitne ka, kisne, har 10 kg kapde par kitna, kitne din chalega.
+- Lock screen ab har page ke upar aata hai.
+- Firestore rules mein 'requests', 'stockUses' staff ke liye add (owner ko rules dobara publish karne hain).
+
 ## v0.6 (20 Nov 2026, raat)
 - Fingerprint / face unlock (Settings → Security → App lock ON → "Unlock with fingerprint"). PIN backup rehta hai.
 - Sample data delete: Dashboard ke purple box mein button + Settings mein. Apni entries bachti hain (demo branch wali entries main branch mein aa jaati hain), cloud se bhi hatta hai.

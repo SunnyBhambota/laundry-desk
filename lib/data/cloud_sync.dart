@@ -25,7 +25,7 @@ class CloudSync {
   bool admin = true;
 
   static const adminCols = {'branches', 'garments', 'staff', 'expenses', 'payouts', 'coupons', 'packagePlans', 'stock', 'stockMoves', 'suppliers'};
-  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues'};
+  static const memberCols = {'customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'requests', 'stockUses'};
   static const allCols = [...adminCols, ...memberCols];
 
   FirebaseFirestore get _fs => FirebaseFirestore.instance;
@@ -108,6 +108,12 @@ class CloudSync {
     for (final x in d.suppliers) {
       m['suppliers/${x.id}'] = x.toJson();
     }
+    for (final x in d.requests) {
+      m['requests/${x.id}'] = x.toJson();
+    }
+    for (final x in d.stockUses) {
+      m['stockUses/${x.id}'] = x.toJson();
+    }
     d.pings.forEach((k, v) => m['pings/$k'] = {'list': v.map((p) => p.toJson()).toList()});
     m['meta/settings'] = d.settingsJson();
     m['meta/counter'] = {'nextNumber': d.nextNumber};
@@ -165,6 +171,10 @@ class CloudSync {
         put<StockMove>(d.stockMoves, StockMove.fromJson, (x) => x.id == id);
       case 'suppliers':
         put<Supplier>(d.suppliers, Supplier.fromJson, (x) => x.id == id);
+      case 'requests':
+        put<StaffRequest>(d.requests, StaffRequest.fromJson, (x) => x.id == id);
+      case 'stockUses':
+        put<StockUse>(d.stockUses, StockUse.fromJson, (x) => x.id == id);
       case 'pings':
         if (j == null) {
           d.pings.remove(id);
@@ -242,6 +252,10 @@ class CloudSync {
         d.stockMoves.clear();
       case 'suppliers':
         d.suppliers.clear();
+      case 'requests':
+        d.requests.clear();
+      case 'stockUses':
+        d.stockUses.clear();
     }
   }
 

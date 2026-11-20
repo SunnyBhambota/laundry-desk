@@ -268,6 +268,96 @@ class StockMove {
       );
 }
 
+/// Staff asks the owner for something (hanger, iron, powder, anything).
+class StaffRequest {
+  StaffRequest({
+    required this.id,
+    required this.by,
+    required this.branchId,
+    required this.item,
+    required this.at,
+    this.itemId = '',
+    this.qty = 1,
+    this.unit = '',
+    this.note = '',
+    this.urgent = false,
+    this.status = 'pending',
+    this.doneAt,
+    this.doneBy = '',
+    this.reply = '',
+  });
+  final String id;
+  final String by; // staff id (or 'owner')
+  final String branchId;
+  final String item; // what is needed
+  final String itemId; // stock item, if picked from the stock list
+  final double qty;
+  final String unit;
+  final String note;
+  final bool urgent;
+  final DateTime at;
+  String status; // pending | approved | given | rejected
+  DateTime? doneAt;
+  String doneBy;
+  String reply;
+  bool get open => status == 'pending' || status == 'approved';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'by': by,
+        'branchId': branchId,
+        'item': item,
+        'itemId': itemId,
+        'qty': qty,
+        'unit': unit,
+        'note': note,
+        'urgent': urgent,
+        'at': at.toIso8601String(),
+        'status': status,
+        'doneAt': doneAt?.toIso8601String(),
+        'doneBy': doneBy,
+        'reply': reply,
+      };
+  factory StaffRequest.fromJson(Map<String, dynamic> j) => StaffRequest(
+        id: j['id'] as String,
+        by: j['by'] as String? ?? '',
+        branchId: j['branchId'] as String? ?? '',
+        item: j['item'] as String? ?? '',
+        itemId: j['itemId'] as String? ?? '',
+        qty: (j['qty'] as num?)?.toDouble() ?? 1,
+        unit: j['unit'] as String? ?? '',
+        note: j['note'] as String? ?? '',
+        urgent: j['urgent'] as bool? ?? false,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        status: j['status'] as String? ?? 'pending',
+        doneAt: DateTime.tryParse(j['doneAt'] as String? ?? ''),
+        doneBy: j['doneBy'] as String? ?? '',
+        reply: j['reply'] as String? ?? '',
+      );
+}
+
+/// Staff writes "used 2 kg powder"; the owner's phone books it into stock once.
+class StockUse {
+  StockUse({required this.id, required this.by, required this.itemId, required this.qty, required this.at, this.branchId = '', this.note = ''});
+  final String id;
+  final String by;
+  final String itemId;
+  final double qty; // positive amount used
+  final DateTime at;
+  final String branchId;
+  final String note;
+  Map<String, dynamic> toJson() => {'id': id, 'by': by, 'itemId': itemId, 'qty': qty, 'at': at.toIso8601String(), 'branchId': branchId, 'note': note};
+  factory StockUse.fromJson(Map<String, dynamic> j) => StockUse(
+        id: j['id'] as String,
+        by: j['by'] as String? ?? '',
+        itemId: j['itemId'] as String? ?? '',
+        qty: (j['qty'] as num?)?.toDouble() ?? 0,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+        branchId: j['branchId'] as String? ?? '',
+        note: j['note'] as String? ?? '',
+      );
+}
+
 class Supplier {
   Supplier({required this.id, required this.name, this.phone = '', this.items = ''});
   final String id;

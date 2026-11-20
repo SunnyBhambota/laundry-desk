@@ -13,6 +13,7 @@ import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 import 'v04_screens.dart';
 import 'live_map_screen.dart';
+import 'v06_screens.dart';
 
 /// Owner/counter view: pickups and deliveries with the assigned person.
 class DeliveryBoardScreen extends StatelessWidget {
@@ -248,6 +249,8 @@ class MyTasksScreen extends StatelessWidget {
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         _DutyCard(),
         const SizedBox(height: 10),
+        const StaffQuickRow(),
+        const SizedBox(height: 10),
         _TrackingBanner(),
         const SizedBox(height: 10),
         const MyEarningsCard(),
@@ -329,6 +332,8 @@ class QueueScreen extends StatelessWidget {
       appBar: AppBar(title: Text(t('queue'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 100), children: [
         _DutyCard(),
+        const SizedBox(height: 10),
+        const StaffQuickRow(),
         const SizedBox(height: 10),
         const MyEarningsCard(),
         const SizedBox(height: 12),

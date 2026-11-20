@@ -47,6 +47,8 @@ class ShopData extends ChangeNotifier {
   List<StockItem> stock = [];
   List<StockMove> stockMoves = [];
   List<Supplier> suppliers = [];
+  List<StaffRequest> requests = [];
+  List<StockUse> stockUses = [];
   /// Loyalty: points per ₹100, value of 1 point, minimum points to redeem (0 per100 = off).
   double pointsPer100 = 1;
   double pointValue = 1;
@@ -95,6 +97,7 @@ class ShopData extends ChangeNotifier {
           // first time online with data made on this phone: upload it
           await cs.push();
         }
+        if (admin && d.applyStockUses()) d.changed();
         d._saveLocal();
       } catch (e) {
         // offline: keep the phone copy, sync later
@@ -107,6 +110,10 @@ class ShopData extends ChangeNotifier {
 
   /// Called by CloudSync when another phone changed something.
   void remoteChanged() {
+    // owner phone books staff "used" entries into stock (once each)
+    if ((sync?.admin ?? true) && applyStockUses()) {
+      Future.microtask(changed);
+    }
     notifyListeners();
     _saveLocal();
   }
@@ -293,6 +300,8 @@ class ShopData extends ChangeNotifier {
         'stock': stock.map((e) => e.toJson()).toList(),
         'stockMoves': stockMoves.map((e) => e.toJson()).toList(),
         'suppliers': suppliers.map((e) => e.toJson()).toList(),
+        'requests': requests.map((e) => e.toJson()).toList(),
+        'stockUses': stockUses.map((e) => e.toJson()).toList(),
         'issues': issues.map((e) => e.toJson()).toList(),
         'payouts': payouts.map((e) => e.toJson()).toList(),
       };
@@ -332,6 +341,8 @@ class ShopData extends ChangeNotifier {
     stock = list('stock').map(StockItem.fromJson).toList();
     stockMoves = list('stockMoves').map(StockMove.fromJson).toList();
     suppliers = list('suppliers').map(Supplier.fromJson).toList();
+    requests = list('requests').map(StaffRequest.fromJson).toList();
+    stockUses = list('stockUses').map(StockUse.fromJson).toList();
     issues = list('issues').map(Issue.fromJson).toList();
     payouts = list('payouts').map(Payout.fromJson).toList();
   }
@@ -662,6 +673,99 @@ class ShopData extends ChangeNotifier {
 
   List<StockItem> get lowStock => stock.where((s) => s.low).toList();
 
+  // ---------- staff requests ----------
+
+  StaffRequest addRequest({required String by, required String branchId, required String item, String itemId = '', double qty = 1, String unit = '', String note = '', bool urgent = false}) {
+    final r = StaffRequest(id: newId('rq'), by: by, branchId: branchId, item: item.trim(), itemId: itemId, qty: qty, unit: unit, note: note.trim(), urgent: urgent, at: DateTime.now());
+    requests.add(r);
+    log(by, 'request.new', text: '${r.item} ${qty.toStringAsFixed(qty == qty.roundToDouble() ? 0 : 1)} $unit');
+    changed();
+    return r;
+  }
+
+  /// status: approved | given | rejected. [fromStock] takes the qty out of stock when giving.
+  void decideRequest(StaffRequest r, String status, {required String by, String reply = '', bool fromStock = false, double cost = 0, String supplierId = ''}) {
+    r
+      ..status = status
+      ..doneAt = DateTime.now()
+      ..doneBy = by
+      ..reply = reply.trim();
+    final it = r.itemId.isEmpty ? null : stock.where((x) => x.id == r.itemId).firstOrNull;
+    final admin = sync?.admin ?? true;
+    if (status == 'given' && it != null) {
+      if (cost > 0 && admin) moveStock(it, r.qty, by: by, cost: cost, supplierId: supplierId, note: 'for request ${r.item}');
+      if (fromStock || cost > 0) {
+        if (admin) {
+          it.qty -= r.qty;
+          stockMoves.add(StockMove(id: 'rq_${r.id}', itemId: it.id, qty: -r.qty, at: DateTime.now(), by: r.by, note: 'given to ${nameOf(r.by)}'));
+        } else {
+          // manager phone: the owner's phone books it into stock
+          stockUses.add(StockUse(id: 'rq_${r.id}', by: r.by, itemId: it.id, qty: r.qty, at: DateTime.now(), branchId: r.branchId, note: 'given to ${nameOf(r.by)}'));
+        }
+      }
+    } else if (status == 'given' && cost > 0 && admin) {
+      expenses.add(Expense(id: newId('e'), branchId: r.branchId.isEmpty ? branches.first.id : r.branchId, category: 'Stock purchase', amount: cost, at: DateTime.now(), note: '${r.item} for ${nameOf(r.by)}'));
+    }
+    log(by, 'request.$status', text: r.item);
+    changed();
+  }
+
+  List<StaffRequest> get pendingRequests => requests.where((r) => r.status == 'pending').toList()..sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) != 0 ? (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0) : a.at.compareTo(b.at));
+
+  // ---------- stock used by staff ----------
+
+  void addStockUse(StockItem it, double qty, {required String by, String branchId = '', String note = ''}) {
+    stockUses.add(StockUse(id: newId('su'), by: by, itemId: it.id, qty: qty, at: DateTime.now(), branchId: branchId.isEmpty ? it.branchId : branchId, note: note));
+    changed();
+  }
+
+  /// Uses not yet booked into stock (staff phones show them as pending).
+  double pendingUse(String itemId) =>
+      stockUses.where((u) => u.itemId == itemId && !stockMoves.any((m) => m.id == 'use_${u.id}')).fold(0.0, (s, u) => s + u.qty);
+
+  /// Owner phone: books every staff "used" entry into stock exactly once.
+  bool applyStockUses() {
+    var any = false;
+    for (final u in stockUses) {
+      final mid = 'use_${u.id}';
+      if (stockMoves.any((m) => m.id == mid)) continue;
+      final it = stock.where((x) => x.id == u.itemId).firstOrNull;
+      if (it == null) continue;
+      it.qty -= u.qty;
+      stockMoves.add(StockMove(id: mid, itemId: it.id, qty: -u.qty, at: u.at, by: u.by, note: u.note));
+      any = true;
+    }
+    return any;
+  }
+
+  /// Average cost of one unit (from purchases with a price).
+  double unitCost(String itemId) {
+    final buys = stockMoves.where((m) => m.itemId == itemId && m.qty > 0 && m.cost > 0);
+    final q = buys.fold(0.0, (s, m) => s + m.qty);
+    return q <= 0 ? 0 : buys.fold(0.0, (s, m) => s + m.cost) / q;
+  }
+
+  /// Amount used in [from, to) (owner moves + staff uses), optional branch / person.
+  double usedIn(String itemId, DateTime from, DateTime to, {String? by}) => stockMoves
+      .where((m) => m.itemId == itemId && m.qty < 0 && !m.at.isBefore(from) && m.at.isBefore(to) && (by == null || m.by == by))
+      .fold(0.0, (s, m) => s - m.qty);
+
+  double boughtIn(String itemId, DateTime from, DateTime to) =>
+      stockMoves.where((m) => m.itemId == itemId && m.qty > 0 && !m.at.isBefore(from) && m.at.isBefore(to)).fold(0.0, (s, m) => s + m.qty);
+
+  /// kg of clothes washed in [from, to) (orders by kg + 0.25 kg per piece).
+  double kgWashed(DateTime from, DateTime to, {String? branchId}) {
+    var kg = 0.0;
+    for (final o in orders) {
+      if (o.status == 'cancelled' || o.createdAt.isBefore(from) || !o.createdAt.isBefore(to)) continue;
+      if (branchId != null && o.branchId != branchId) continue;
+      for (final l in o.lines) {
+        kg += l.unit == 'kg' ? l.qty : l.qty * 0.25;
+      }
+    }
+    return kg;
+  }
+
   void setCustomerLocation(String customerId, double lat, double lng, {bool onlyIfMissing = false}) {
     final c = customer(customerId);
     if (c == null || (onlyIfMissing && c.hasLocation)) return;
@@ -909,6 +1013,8 @@ class ShopData extends ChangeNotifier {
     stockMoves.removeWhere((x) => demo(x.id));
     suppliers.removeWhere((x) => demo(x.id));
     payouts.removeWhere((p) => demo(p.id) || demo(p.staffId));
+    requests.removeWhere((r) => demo(r.id) || demo(r.by));
+    stockUses.removeWhere((u) => demo(u.id) || demo(u.by));
     final after = customers.length + orders.length + staff.length + expenses.length + branches.length + attendance.length + activity.length +
         pings.length + issues.length + coupons.length + packagePlans.length + stock.length + stockMoves.length + suppliers.length + payouts.length;
     hasSample = false;

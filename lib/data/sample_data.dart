@@ -276,6 +276,17 @@ class SampleData {
       StockItem(id: 'demo_st5', name: 'Tag rolls (printer)', unit: 'roll', qty: 12, minQty: 4, branchId: main),
     ]);
     d.stockMoves.add(StockMove(id: 'demo_sm1', itemId: 'demo_st1', qty: 20, at: now.subtract(const Duration(days: 9)), by: 'owner', supplierId: 'demo_su1', cost: 3200));
+    // daily use of detergent / hangers by the washer
+    for (var i = 1; i <= 8; i++) {
+      d.stockMoves.add(StockMove(id: 'demo_smu$i', itemId: 'demo_st1', qty: -1.75, at: now.subtract(Duration(days: i)), by: 'demo_s3'));
+      d.stockMoves.add(StockMove(id: 'demo_smh$i', itemId: 'demo_st2', qty: -12, at: now.subtract(Duration(days: i)), by: i.isEven ? 'demo_s3' : 'demo_s1'));
+    }
+    d.requests.addAll([
+      StaffRequest(id: 'demo_rq1', by: 'demo_s3', branchId: main, item: 'Hangers', itemId: 'demo_st2', qty: 100, unit: 'pc', note: 'Ready rack is full', urgent: true, at: now.subtract(const Duration(hours: 3))),
+      StaffRequest(id: 'demo_rq2', by: 'demo_s3', branchId: main, item: 'Iron / istri', qty: 1, unit: 'pc', note: 'Steam iron 2 not heating', at: now.subtract(const Duration(hours: 20))),
+      StaffRequest(id: 'demo_rq3', by: 'demo_s5', branchId: b2.id, item: 'Rain cover for bike bag', qty: 1, unit: 'pc', at: now.subtract(const Duration(days: 2)), status: 'approved', doneBy: 'owner', doneAt: now.subtract(const Duration(days: 1))),
+      StaffRequest(id: 'demo_rq4', by: 'demo_s2', branchId: b2.id, item: 'Bill roll', qty: 5, unit: 'roll', at: now.subtract(const Duration(days: 4)), status: 'given', doneBy: 'owner', doneAt: now.subtract(const Duration(days: 3)), reply: 'Kept in drawer'),
+    ]);
     d.hasSample = true;
     d.changed();
   }

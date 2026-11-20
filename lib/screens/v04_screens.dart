@@ -16,6 +16,7 @@ import '../widgets/common.dart';
 import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
+import 'v06_screens.dart';
 
 // ---------------- offers: loyalty, coupons, packages ----------------
 
@@ -330,17 +331,17 @@ class StockScreen extends StatelessWidget {
     final low = items.where((x) => x.low).toList();
     final multi = d.branches.length > 1;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text(L(app, 'Stock', 'स्टॉक')),
           actions: const [BranchSwitch()],
-          bottom: TabBar(tabs: [Tab(text: L(app, 'Items', 'सामान')), Tab(text: L(app, 'Suppliers', 'सप्लायर'))]),
+          bottom: TabBar(tabs: [Tab(text: L(app, 'Items', 'सामान')), Tab(text: L(app, 'Report', 'रिपोर्ट')), Tab(text: L(app, 'Suppliers', 'सप्लायर'))]),
         ),
         floatingActionButton: app.isOwner
             ? Builder(
                 builder: (ctx) => FloatingActionButton.extended(
-                  onPressed: () => DefaultTabController.of(ctx).index == 0 ? _addItem(ctx, app) : _addSupplier(ctx, app),
+                  onPressed: () => DefaultTabController.of(ctx).index == 2 ? _addSupplier(ctx, app) : _addItem(ctx, app),
                   icon: const Icon(Icons.add),
                   label: Text(L(app, 'Add', 'जोड़ें')),
                 ),
@@ -387,6 +388,7 @@ class StockScreen extends StatelessWidget {
                 ),
               ),
           ]),
+          const StockReportView(),
           ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 100), children: [
             if (d.suppliers.isEmpty) EmptyState(icon: Icons.local_shipping_outlined, text: L(app, 'No suppliers yet.', 'अभी कोई सप्लायर नहीं।')),
             for (final s in d.suppliers)

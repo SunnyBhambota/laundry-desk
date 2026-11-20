@@ -33,7 +33,7 @@ service cloud.firestore {
       match /{col}/{id} {
         allow read: if isOwner(owner) || isMember(owner);
         allow write: if isOwner(owner)
-          || (isMember(owner) && col in ['customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'payouts']);
+          || (isMember(owner) && col in ['customers', 'orders', 'attendance', 'activity', 'pings', 'issues', 'payouts', 'requests', 'stockUses']);
       }
     }
 

@@ -342,5 +342,36 @@ void main() {
     final poster = await ExportService.bookingPosterPdf(shop: shop, link: 'https://wa.me/919820011111');
     expect(poster.length, greaterThan(1000));
   });
+
+  test('staff requests + stock used booked once', () async {
+    final d = ShopData('local_rq');
+    final shop = _shop();
+    await d.initialise(shop);
+    SampleData.fill(d, services: shop.services);
+    final it = d.stock.firstWhere((x) => x.id == 'demo_st3');
+    final start = it.qty;
+    final r = d.addRequest(by: 'demo_s3', branchId: d.branches.first.id, item: it.name, itemId: it.id, qty: 5, unit: 'L', urgent: true);
+    expect(d.pendingRequests.first.id, r.id); // urgent first
+    d.decideRequest(r, 'given', by: 'owner', fromStock: true);
+    expect(it.qty, start - 5);
+    expect(r.open, isFalse);
+    d.addStockUse(it, 2, by: 'demo_s3');
+    expect(d.pendingUse(it.id), 2);
+    expect(d.applyStockUses(), isTrue);
+    expect(d.applyStockUses(), isFalse); // only once
+    expect(it.qty, start - 7);
+    expect(d.pendingUse(it.id), 0);
+    final n = DateTime.now();
+    expect(d.usedIn(it.id, n.subtract(const Duration(days: 1)), n.add(const Duration(days: 1))), 7);
+    final buy = d.addRequest(by: 'demo_s3', branchId: d.branches.first.id, item: 'Iron / istri', qty: 1, unit: 'pc');
+    final exp = d.expenses.length;
+    d.decideRequest(buy, 'given', by: 'owner', cost: 1200);
+    expect(d.expenses.length, exp + 1);
+    final back = StaffRequest.fromJson(r.toJson());
+    expect(back.status, 'given');
+    expect(d.unitCost('demo_st1'), closeTo(160, .01));
+    d.clearSample();
+    expect(d.requests.where((x) => x.by.startsWith('demo_')), isEmpty);
+  });
 }
 

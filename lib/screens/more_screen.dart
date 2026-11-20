@@ -17,6 +17,7 @@ import 'v03_screens.dart';
 import 'v04_screens.dart';
 import '../data/issue_models.dart';
 import 'reports_screen.dart';
+import 'v06_screens.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -119,6 +120,10 @@ class _MoreScreenState extends State<MoreScreen> {
           ]),
         if (app.role == Role.washer || app.role == Role.delivery)
           group([
+            tile(Icons.campaign_outlined, app.canManage ? L(app, 'Staff requests', 'स्टाफ की माँग') : L(app, 'Ask the boss (hanger, iron…)', 'बॉस से माँगें (हैंगर, इस्त्री…)'),
+                () => go(const RequestsScreen()),
+                sub: app.canManage && d.pendingRequests.isNotEmpty ? '${d.pendingRequests.length} ${L(app, 'waiting', 'इंतज़ार में')}' : null),
+            if (!app.isOwner && app.module('stock')) tile(Icons.water_drop_outlined, L(app, 'Stock used (powder…)', 'स्टॉक इस्तेमाल (पाउडर…)'), () => go(const StockUseScreen())),
             tile(Icons.qr_code_scanner, L(app, 'Scan tag / bill QR', 'टैग / बिल QR स्कैन'), () => go(const ScanScreen())),
             if (app.role == Role.delivery) tile(Icons.route_outlined, L(app, 'My route (nearest first)', 'मेरा रूट (पास वाला पहले)'), () => go(RouteMapScreen(agentId: app.staffUser!.id))),
           ]),

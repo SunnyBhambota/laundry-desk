@@ -32,6 +32,7 @@ import 'package:laundry_desk/screens/shell.dart';
 import 'package:laundry_desk/screens/staff_screen.dart';
 import 'package:laundry_desk/screens/v03_screens.dart';
 import 'package:laundry_desk/screens/v04_screens.dart';
+import 'package:laundry_desk/screens/v06_screens.dart';
 import 'package:laundry_desk/state/app_state.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -256,6 +257,8 @@ void main() {
       await visit('$tag live map', LiveMapScreen(customerId: o1.customerId, orderId: o1.id));
       await visit('$tag offers', const OffersScreen());
       await visit('$tag stock', const StockScreen());
+      await visit('$tag requests', const RequestsScreen());
+      await visit('$tag stock used', const StockUseScreen());
       await visit('$tag booking qr', const BookingQrScreen());
       await visit('$tag expenses', const ExpensesScreen());
       await visit('$tag branches', const BranchesScreen());

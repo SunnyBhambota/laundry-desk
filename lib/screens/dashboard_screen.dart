@@ -19,6 +19,7 @@ import 'orders_screen.dart';
 import 'reports_screen.dart';
 import 'staff_screen.dart';
 import 'v03_screens.dart';
+import 'v06_screens.dart';
 
 /// Owner / manager / counter home (canvas: "Owner – Admin dashboard").
 class DashboardScreen extends StatelessWidget {
@@ -234,6 +235,24 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 );
               }),
+              if (app.canManage && d.pendingRequests.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: const Color(0xFFE6EEFC),
+                    borderRadius: BorderRadius.circular(14),
+                    child: ListTile(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      leading: Icon(Icons.campaign_outlined, color: d.pendingRequests.any((r) => r.urgent) ? const Color(0xFFB42318) : LD.primary),
+                      title: Text('${d.pendingRequests.length} ${L(app, 'staff requests waiting', 'स्टाफ की माँग इंतज़ार में')}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: LD.navy)),
+                      subtitle: Text(d.pendingRequests.take(3).map((r) => '${r.item} (${d.nameOf(r.by).split(' ').first})').join(', '),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: const Icon(Icons.chevron_right, color: LD.navy),
+                      onTap: () => go(const RequestsScreen()),
+                    ),
+                  ),
+                ),
               if (app.module('stock') && app.canManage && d.lowStock.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
