@@ -1,6 +1,8 @@
 # Laundry Desk – Project notes (Claude ke liye handoff)
 
 ## Owner ki zaroori baatein
+- HAR release ke saath install QR file (laundry-desk-install-qr.png / docs/install-qr.png) SendUserFile se bhejna – owner ka rule.
+- App naam ab LaundryCase (logo owner ka, 20 Nov). Package id com.brotrix.laundry same.
 - Baat Hinglish mein, English letters mein.
 - Mobile app (Flutter), pehle Android, phir iOS. Web app nahi.
 - India + international: multi-currency, English default + Hindi.
