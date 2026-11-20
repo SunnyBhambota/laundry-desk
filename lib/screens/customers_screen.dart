@@ -10,6 +10,7 @@ import '../widgets/ui.dart';
 import 'new_order_screen.dart';
 import 'v04_screens.dart';
 import 'orders_screen.dart';
+import 'live_map_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -171,7 +172,7 @@ class CustomerDetailScreen extends StatelessWidget {
               ),
               if (c.address.isNotEmpty || c.hasLocation)
                 OutlinedButton.icon(
-                    onPressed: () => openMaps(c.hasLocation ? '${c.lat},${c.lng}' : c.address),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(customerId: c.id))),
                     icon: const Icon(Icons.map_outlined, size: 18),
                     label: Text(t('map'))),
             ]),

@@ -65,6 +65,7 @@ class AppState extends ChangeNotifier {
   bool module(String m) => shop != null && data != null && data!.moduleOn(m, shop!);
 
   Future<void> load() async {
+    await loadBio();
     final p = await SharedPreferences.getInstance();
     lang = p.getString('ld_lang') ?? 'en';
     owner = await AuthService.instance.currentOwner();
@@ -203,6 +204,27 @@ class AppState extends ChangeNotifier {
     locked = false;
     notifyListeners();
     return true;
+  }
+
+  // fingerprint / face unlock: a choice of this phone only (PIN stays as the backup)
+  static const _kBio = 'ld_bio_unlock';
+  bool bioOn = false;
+
+  Future<void> loadBio() async {
+    final p = await SharedPreferences.getInstance();
+    bioOn = p.getBool(_kBio) ?? false;
+  }
+
+  Future<void> setBio(bool on) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kBio, on);
+    bioOn = on;
+    notifyListeners();
+  }
+
+  void unlockWithBio() {
+    locked = false;
+    notifyListeners();
   }
 
   void setLockPin(String? pin) {

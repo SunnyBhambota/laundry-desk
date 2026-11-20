@@ -875,24 +875,45 @@ class ShopData extends ChangeNotifier {
   }
 
   /// Removes sample customers/orders/staff/expenses (keeps setup, rate card, branches you added).
-  void clearSample() {
-    customers.removeWhere((c) => c.id.startsWith('demo_'));
-    orders.removeWhere((o) => o.id.startsWith('demo_'));
-    staff.removeWhere((s) => s.id.startsWith('demo_'));
-    expenses.removeWhere((e) => e.id.startsWith('demo_'));
-    branches.removeWhere((b) => b.id.startsWith('demo_'));
-    attendance.removeWhere((a) => a.staffId.startsWith('demo_'));
-    activity.removeWhere((a) => a.by.startsWith('demo_') || a.orderId.startsWith('demo_'));
-    pings.removeWhere((k, _) => k.startsWith('demo_'));
-    issues.removeWhere((i) => i.id.startsWith('demo_'));
-    coupons.removeWhere((x) => x.id.startsWith('demo_'));
-    packagePlans.removeWhere((x) => x.id.startsWith('demo_'));
-    stock.removeWhere((x) => x.id.startsWith('demo_'));
-    stockMoves.removeWhere((x) => x.id.startsWith('demo_'));
-    suppliers.removeWhere((x) => x.id.startsWith('demo_'));
-    payouts.removeWhere((p) => p.id.startsWith('demo_'));
+  /// Removes demo records. Own records that point at demo branches/customers are kept and moved
+  /// to the main branch so nothing real is lost. Returns how many records were removed.
+  int clearSample() {
+    bool demo(String id) => id.startsWith('demo_');
+    final before = customers.length + orders.length + staff.length + expenses.length + branches.length + attendance.length + activity.length +
+        pings.length + issues.length + coupons.length + packagePlans.length + stock.length + stockMoves.length + suppliers.length + payouts.length;
+    final keepBranch = branches.where((b) => !demo(b.id)).firstOrNull ?? branches.firstOrNull;
+    final usedCustomers = orders.where((o) => !demo(o.id)).map((o) => o.customerId).toSet();
+    orders.removeWhere((o) => demo(o.id));
+    customers.removeWhere((c) => demo(c.id) && !usedCustomers.contains(c.id));
+    staff.removeWhere((x) => demo(x.id));
+    expenses.removeWhere((e) => demo(e.id));
+    if (keepBranch != null && !demo(keepBranch.id)) {
+      branches.removeWhere((b) => demo(b.id));
+      for (final o in orders) {
+        if (demo(o.branchId)) o.branchId = keepBranch.id;
+      }
+      for (final x in staff) {
+        if (demo(x.branchId)) x.branchId = keepBranch.id;
+      }
+      for (final e in expenses) {
+        if (demo(e.branchId)) e.branchId = keepBranch.id;
+      }
+    }
+    attendance.removeWhere((a) => demo(a.staffId));
+    activity.removeWhere((a) => demo(a.by) || demo(a.orderId));
+    pings.removeWhere((k, _) => demo(k));
+    issues.removeWhere((i) => demo(i.id) || demo(i.orderId));
+    coupons.removeWhere((x) => demo(x.id));
+    packagePlans.removeWhere((x) => demo(x.id));
+    stock.removeWhere((x) => demo(x.id));
+    stockMoves.removeWhere((x) => demo(x.id));
+    suppliers.removeWhere((x) => demo(x.id));
+    payouts.removeWhere((p) => demo(p.id) || demo(p.staffId));
+    final after = customers.length + orders.length + staff.length + expenses.length + branches.length + attendance.length + activity.length +
+        pings.length + issues.length + coupons.length + packagePlans.length + stock.length + stockMoves.length + suppliers.length + payouts.length;
     hasSample = false;
     if (orders.isEmpty) nextNumber = 1;
     changed();
+    return before - after;
   }
 }

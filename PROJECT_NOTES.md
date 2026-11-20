@@ -1,6 +1,7 @@
 # Laundry Desk – Project notes (Claude ke liye handoff)
 
 ## Owner ki zaroori baatein
+- (20 Nov raat) Git par push/build se PEHLE owner se poochna hai: "Git par daalun?" – haan bole tabhi push.
 - HAR release ke saath install QR file (laundry-desk-install-qr.png / docs/install-qr.png) SendUserFile se bhejna – owner ka rule.
 - App naam ab LaundryCase (logo owner ka, 20 Nov). Package id com.brotrix.laundry same.
 - Baat Hinglish mein, English letters mein.
@@ -58,6 +59,11 @@
 - Multi-branch: `widgets/branch_switch.dart`, BranchCompareCard/BranchRow + DayCloseScreen + OverdueScreen (reports_screen.dart), ExportService.branchCsv, branch sheet (admin_screens), staff edit (staff_screen), order move, `ShopData.agentsFor`.
 - BookingQrScreen (v04_screens) + ExportService.bookingPosterPdf/bookingLink.
 - Owner rule (20 Nov): paid things (Play Store, iOS, WhatsApp API, OTP) STOP. Never wait for "allow" – everything is allowed.
+
+## v0.6 – done (local, push pending owner OK)
+- `services/bio_service.dart` (local_auth), AppState.bioOn/setBio/unlockWithBio, LockScreen fingerprint button, Settings switch. CI: MainActivity → FlutterFragmentActivity, AppCompat theme + appcompat dep, USE_BIOMETRIC.
+- `screens/live_map_screen.dart`: LiveMapScreen (flutter_map + OSRM route + Nominatim geocode fallback, GPS stream for delivery role, last ping for others). Used by order detail / delivery TaskCard / customer page.
+- `ShopData.clearSample()` returns count, keeps own records (moves them to a real branch); `deleteSampleFlow` in dashboard_screen.dart; e2e checks cloud after delete.
 
 ## Owner ko bataya hua pending (order mein)
 v0.3: order edit/refund/customer delete, QR scan, Bluetooth printer, UPI QR on bill, VIP/business rates, backup/restore file, Hindi gaps.

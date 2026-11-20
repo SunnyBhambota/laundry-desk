@@ -12,6 +12,7 @@ import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
 import 'order_detail_screen.dart';
 import 'v04_screens.dart';
+import 'live_map_screen.dart';
 
 /// Owner/counter view: pickups and deliveries with the assigned person.
 class DeliveryBoardScreen extends StatelessWidget {
@@ -169,8 +170,11 @@ class TaskCard extends StatelessWidget {
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8, children: [
           OutlinedButton.icon(onPressed: () => callPhone(c?.phone ?? ''), icon: const Icon(Icons.call_outlined, size: 18), label: Text(t('call'))),
-          if ((c?.address ?? '').isNotEmpty)
-            OutlinedButton.icon(onPressed: () => openMaps(c!.address), icon: const Icon(Icons.navigation_outlined, size: 18), label: Text(t('map'))),
+          if (c != null && (c.address.isNotEmpty || c.hasLocation))
+            OutlinedButton.icon(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(customerId: c.id, orderId: order.id))),
+                icon: const Icon(Icons.navigation_outlined, size: 18),
+                label: Text(t('map'))),
           OutlinedButton(
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id))),
             child: Text(t('open2')),

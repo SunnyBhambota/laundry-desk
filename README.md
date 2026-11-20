@@ -13,6 +13,11 @@ https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-d
   App khulte hi band ho jaye to release nahi banta.
 - Pehli baar Android "unknown apps" ki permission maangega: Chrome ko allow karo.
 
+## v0.6 (20 Nov 2026, raat)
+- Fingerprint / face unlock (Settings → Security → App lock ON → "Unlock with fingerprint"). PIN backup rehta hai.
+- Sample data delete: Dashboard ke purple box mein button + Settings mein. Apni entries bachti hain (demo branch wali entries main branch mein aa jaati hain), cloud se bhi hatta hai.
+- In-app live map (Zomato jaisa): order / delivery task / customer par "Map" → app ke andar map, road route, km + minute, delivery boy ki live location, Call / WhatsApp, "yahan pin save karein".
+
 ## v0.5 (20 Nov 2026)
 - Login fix: mobile +91/0 ke saath bhi chalega, email se login, Google owner ka password, logout se pehle cloud save, More mein cloud status.
 - Har screen par branch chooser; Branch comparison (table + Excel/CSV + PDF); Day closing (cash book); Late orders; Last month / dates choose.

@@ -1,7 +1,7 @@
 name: laundry_desk
 description: "Laundry Desk – laundry shop management by BrotriX Technologies."
 publish_to: 'none'
-version: 0.5.1+6
+version: 0.6.0+7
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -32,6 +32,9 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   google_sign_in: ^6.2.1
+  # v0.6: fingerprint / face unlock, in-app road route
+  local_auth: ^2.3.0
+  http: ^1.2.2
   # login + cloud (works without these in demo mode until Firebase is set up)
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1

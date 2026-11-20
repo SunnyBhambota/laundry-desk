@@ -255,10 +255,24 @@ class DashboardScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: const Color(0xFFEDE9FE), borderRadius: BorderRadius.circular(12)),
-                  child: Row(children: [
-                    const Icon(Icons.science_outlined, size: 18, color: Color(0xFF5B3FC4)),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(t('sampleBanner'), style: const TextStyle(fontSize: 12, color: Color(0xFF5B3FC4)))),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Row(children: [
+                      const Icon(Icons.science_outlined, size: 18, color: Color(0xFF5B3FC4)),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(t('sampleBanner'), style: const TextStyle(fontSize: 12, color: Color(0xFF5B3FC4)))),
+                    ]),
+                    if (app.isOwner) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF5B3FC4), visualDensity: VisualDensity.compact),
+                          onPressed: () => deleteSampleFlow(context, app),
+                          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                          label: Text(t('clearSample')),
+                        ),
+                      ),
+                    ],
                   ]),
                 ),
               ],
@@ -489,5 +503,24 @@ class DashboardScreen extends StatelessWidget {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${days[d.weekday - 1]}, ${d.day} ${months[d.month - 1]}';
+  }
+}
+
+
+/// Asks, removes all sample (demo) records from this phone and the cloud, and says what is left.
+Future<void> deleteSampleFlow(BuildContext context, AppState app) async {
+  final d = app.data!;
+  final ok = await confirm(
+      context,
+      L(app, 'Delete sample data?', 'सैंपल डेटा हटाएँ?'),
+      L(app, 'All demo branches, staff, customers, orders, expenses and reports will be removed from this phone and the cloud. Your own entries stay.',
+          'सारी डेमो ब्रांच, स्टाफ, ग्राहक, ऑर्डर, खर्चे और रिपोर्ट इस फ़ोन और क्लाउड से हट जाएँगे। आपकी अपनी एंट्री रहेंगी।'),
+      danger: true);
+  if (!ok) return;
+  final n = d.clearSample();
+  app.setBranchFilter(null);
+  await d.flush();
+  if (context.mounted) {
+    toast(context, L(app, 'Sample data deleted ($n records). Now add your own branches, staff and orders.', 'सैंपल डेटा हट गया ($n)। अब अपनी ब्रांच, स्टाफ और ऑर्डर डालें।'));
   }
 }

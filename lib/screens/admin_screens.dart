@@ -6,11 +6,13 @@ import '../config/app_config.dart';
 import '../data/ops_models.dart';
 import '../data/reports.dart';
 import '../services/auth_service.dart';
+import '../services/bio_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/branch_switch.dart';
 import '../widgets/ui.dart';
+import 'dashboard_screen.dart';
 import 'reports_screen.dart';
 import 'v03_screens.dart';
 
@@ -685,6 +687,25 @@ class SettingsScreen extends StatelessWidget {
               trailing: Text(app.lockOn ? 'ON' : 'OFF', style: const TextStyle(fontWeight: FontWeight.w800)),
               onTap: () => _lockSheet(context, app),
             ),
+            if (app.lockOn)
+              FutureBuilder<bool>(
+                future: BioService.instance.available(),
+                builder: (_, snap) => SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: const Icon(Icons.fingerprint, color: LD.primary),
+                  title: Text(L(app, 'Unlock with fingerprint / face', 'फिंगरप्रिंट / फेस से खोलें')),
+                  subtitle: Text(snap.data == false
+                      ? L(app, 'Add a fingerprint in phone Settings → Security first.', 'पहले फ़ोन Settings → Security में फिंगरप्रिंट जोड़ें।')
+                      : L(app, 'This phone only · PIN still works', 'सिर्फ़ इस फ़ोन पर · PIN भी चलेगा')),
+                  value: app.bioOn,
+                  onChanged: snap.data != true
+                      ? null
+                      : (v) async {
+                          if (v && !await BioService.instance.unlock(L(app, 'Confirm your fingerprint', 'अपना फिंगरप्रिंट लगाएँ'))) return;
+                          await app.setBio(v);
+                        },
+                ),
+              ),
             if (app.isOwner) ...[
               const Divider(height: 1),
               ListTile(
@@ -725,7 +746,7 @@ class SettingsScreen extends StatelessWidget {
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
               onPressed: () async {
-                if (await confirm(context, t('clearSample'), t('clearSure'), danger: true)) d.clearSample();
+                await deleteSampleFlow(context, app);
               },
               icon: const Icon(Icons.delete_sweep_outlined),
               label: Text(t('clearSample')),
@@ -809,7 +830,7 @@ void _lockSheet(BuildContext context, AppState app) {
               }
               app.setLockPin(a.text);
               Navigator.pop(c);
-              toast(context, t('lockSet'));
+              toast(context, '${t('lockSet')} ${L(app, 'You can also switch on fingerprint below.', 'नीचे फिंगरप्रिंट भी चालू कर सकते हैं।')}');
             },
             child: Text(t('save')),
           ),

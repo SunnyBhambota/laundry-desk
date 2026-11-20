@@ -20,6 +20,7 @@ import 'package:laundry_desk/screens/customers_screen.dart';
 import 'package:laundry_desk/screens/dashboard_screen.dart';
 import 'package:laundry_desk/screens/delivery_screen.dart';
 import 'package:laundry_desk/screens/issue_screens.dart';
+import 'package:laundry_desk/screens/live_map_screen.dart';
 import 'package:laundry_desk/screens/more_screen.dart';
 import 'package:laundry_desk/screens/new_order_screen.dart';
 import 'package:laundry_desk/screens/order_detail_screen.dart';
@@ -251,6 +252,7 @@ void main() {
       await visit('$tag wrong delivery', WrongDeliveryScreen(orderId: o1.id));
       await visit('$tag delivery board', const DeliveryBoardScreen());
       await visit('$tag route map', const RouteMapScreen());
+      await visit('$tag live map', LiveMapScreen(customerId: o1.customerId, orderId: o1.id));
       await visit('$tag offers', const OffersScreen());
       await visit('$tag stock', const StockScreen());
       await visit('$tag booking qr', const BookingQrScreen());
@@ -310,6 +312,20 @@ void main() {
     await wait(t, () => s.owner != null && s.setupDone, 'owner again');
     await wait(t, () => s.data!.orders.any((x) => x.id == staffOrder), 'owner sees staff order');
     log('owner sees staff order');
+
+    // ---- delete sample data: only own records stay, also in the cloud ----
+    final od = s.data!;
+    final removed = od.clearSample();
+    expect(removed, greaterThan(100));
+    expect(od.orders.every((x) => !x.id.startsWith('demo_')), isTrue);
+    expect(od.orders.any((x) => x.id == staffOrder), isTrue, reason: 'own order kept');
+    await od.flush();
+    await pause(t, 3000);
+    await wait(t, () => !od.sync!.busy, 'delete upload', secs: 180);
+    final leftOrders = (await shopRef.collection('orders').get(const GetOptions(source: Source.server))).size;
+    expect(leftOrders, od.orders.length);
+    expect((await shopRef.collection('branches').get(const GetOptions(source: Source.server))).size, od.branches.length);
+    log('sample deleted: $removed records, cloud orders $leftOrders');
 
     // ---- clean up the test account ----
     try {

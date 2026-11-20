@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../services/bio_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
@@ -18,6 +19,26 @@ class _LockScreenState extends State<LockScreen> {
   bool _wrong = false;
   int _fails = 0;
   DateTime? _waitUntil;
+  bool _bio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final app = context.read<AppState>();
+      if (!app.bioOn) return;
+      final ok = await BioService.instance.available();
+      if (!mounted) return;
+      setState(() => _bio = ok);
+      if (ok) _fingerprint();
+    });
+  }
+
+  Future<void> _fingerprint() async {
+    final app = context.read<AppState>();
+    final ok = await BioService.instance.unlock(app.t('lockEnter'));
+    if (ok && mounted) app.unlockWithBio();
+  }
 
   void _press(String k) {
     if (_waitUntil != null && DateTime.now().isBefore(_waitUntil!)) return;
@@ -106,7 +127,20 @@ class _LockScreenState extends State<LockScreen> {
                 ['7', '8', '9'],
               ])
                 Row(children: [for (final k in row) key(k)]),
-              Row(children: [const Expanded(child: SizedBox()), key('0'), key('<')]),
+              Row(children: [
+                Expanded(
+                  child: _bio
+                      ? IconButton(
+                          tooltip: 'Fingerprint',
+                          iconSize: 40,
+                          onPressed: _fingerprint,
+                          icon: const Icon(Icons.fingerprint, color: LD.primary),
+                        )
+                      : const SizedBox(),
+                ),
+                key('0'),
+                key('<'),
+              ]),
               TextButton(onPressed: app.signOut, child: Text(t('logout'))),
               const SizedBox(height: 10),
             ]),

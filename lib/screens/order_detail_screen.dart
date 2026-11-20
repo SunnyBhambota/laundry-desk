@@ -11,6 +11,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ui.dart';
+import 'live_map_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -149,9 +150,9 @@ class OrderDetailScreen extends StatelessWidget {
               onTap: () => openWhatsApp(c?.phone ?? '', Messages.bill(o, shopName: app.shop!.shopName, customerName: c?.name ?? '', currency: cur)),
             ),
           ),
-          if ((c?.address ?? '').isNotEmpty) ...[
+          if (c != null && (c.address.isNotEmpty || c.hasLocation)) ...[
             const SizedBox(width: 8),
-            Expanded(child: _ActionBtn(icon: Icons.map_outlined, label: t('map'), onTap: () => openMaps(c!.address))),
+            Expanded(child: _ActionBtn(icon: Icons.map_outlined, label: t('map'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(customerId: c.id, orderId: o.id))))),
           ],
         ]),
         for (final iss in d.issuesOf(o.id)) ...[
