@@ -10,7 +10,7 @@ sed -i 's/applicationId = "com.brotrix.laundry_desk"/applicationId = "com.brotri
 grep -n "applicationId" "$F"
 sed -i '0,/^android {/s//android {\n    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }/' "$F"
 M=android/app/src/main/AndroidManifest.xml
-sed -i 's/android:label="laundry_desk"/android:label="Laundry Desk"/' "$M"
+sed -i 's/android:label="laundry_desk"/android:label="LaundryCase"/' "$M"
 # WhatsApp / phone / maps links (url_launcher) on Android 11+
 grep -q '<queries>' "$M" && sed -i 's#<queries>#<queries>\n        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>\n        <intent><action android:name="android.intent.action.DIAL" /><data android:scheme="tel" /></intent>#' "$M"
 # GPS for delivery tracking, internet for cloud + fonts

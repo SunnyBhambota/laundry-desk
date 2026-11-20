@@ -66,7 +66,7 @@ class TrackingService {
         distanceFilter: 50,
         intervalDuration: const Duration(minutes: 2),
         foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'Laundry Desk · on duty',
+          notificationTitle: 'LaundryCase · on duty',
           notificationText: 'Sharing your location with the shop while on duty',
           enableWakeLock: true,
         ),

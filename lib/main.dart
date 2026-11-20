@@ -25,7 +25,7 @@ class LaundryDeskApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Laundry Desk',
+      title: 'LaundryCase',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       home: const AuthGate(),

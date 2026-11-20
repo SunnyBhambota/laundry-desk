@@ -7,14 +7,17 @@ import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
-/// App logo (owner's design: phone + washing machine), assets/images/logo_mark.png.
+/// App logo (owner's LaundryCase design: washing machine + towels), assets/images/logo_mark.png.
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 34});
   final double size;
 
   @override
   Widget build(BuildContext context) =>
-      Image.asset('assets/images/logo_mark.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'Laundry Desk');
+      ClipRRect(
+        borderRadius: BorderRadius.circular(size * .22),
+        child: Image.asset('assets/images/logo_mark.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'LaundryCase'),
+      );
 }
 
 class Wordmark extends StatelessWidget {
@@ -26,10 +29,10 @@ class Wordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(children: [
-        TextSpan(text: 'Laundry', style: heading(size, color: light ? Colors.white : const Color(0xFF0D3F94))),
+        TextSpan(text: 'Laundry', style: heading(size, color: light ? Colors.white : const Color(0xFF01245A))),
         TextSpan(
-          text: 'Desk',
-          style: heading(size, weight: FontWeight.w700, color: light ? const Color(0xFF6FE0F0) : const Color(0xFF14AFCB)),
+          text: 'Case',
+          style: heading(size, color: light ? const Color(0xFF6FD0FF) : const Color(0xFF0189D5)),
         ),
       ]),
     );

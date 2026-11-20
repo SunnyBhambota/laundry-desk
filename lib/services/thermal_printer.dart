@@ -167,7 +167,7 @@ class ThermalPrinter {
     }
     e
       ..text('Thank you!')
-      ..text('Laundry Desk')
+      ..text('LaundryCase')
       ..feed(3)
       ..cut();
     return e.b;

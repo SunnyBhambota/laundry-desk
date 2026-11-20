@@ -241,7 +241,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         '${t('expenses')}: ${money(r.expense, cur)}\n'
         '${t('profit')}: ${money(r.profit, cur)}\n'
         '${t('pendingDues')}: ${money(r.pendingDues, cur)}\n'
-        '– Laundry Desk';
+        '– LaundryCase';
   }
 }
 
@@ -369,7 +369,7 @@ class _DayCloseScreenState extends State<DayCloseScreen> {
         '${t('expenses')}: ${money(cashExp, cur)}\n'
         '${L(app, 'Cash in hand', 'हाथ में कैश')}: ${money(cashIn - cashExp, cur)}\n'
         '${L(app, 'Overdue orders', 'देरी वाले ऑर्डर')}: $overdue · ${L(app, 'Staff present', 'हाज़िर स्टाफ')}: $present\n'
-        '– Laundry Desk';
+        '– LaundryCase';
 
     Widget line(String a, String b, {Color? c, bool bold = false}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),

@@ -77,7 +77,7 @@ class _LockScreenState extends State<LockScreen> {
               const Spacer(),
               const LogoMark(size: 64),
               const SizedBox(height: 14),
-              Text(app.shop?.shopName ?? 'Laundry Desk', style: heading(22)),
+              Text(app.shop?.shopName ?? 'LaundryCase', style: heading(22)),
               const SizedBox(height: 6),
               Text(t('lockEnter'), style: const TextStyle(color: LD.slate)),
               const SizedBox(height: 22),

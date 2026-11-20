@@ -84,7 +84,7 @@ class ExportService {
           pw.Text('${o.pieces} pieces. Please bring this bill when collecting.', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: _slate)),
           pw.Text('Thank you!', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 4),
-          pw.Text('Laundry Desk by BrotriX Technologies', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 7, color: _slate)),
+          pw.Text('LaundryCase by BrotriX Technologies', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 7, color: _slate)),
         ]),
       ),
     ));
@@ -169,7 +169,7 @@ class ExportService {
         pw.Text('$periodLabel${branchId == null ? '' : ' - ${data.branch(branchId)?.name ?? ''}'}', style: const pw.TextStyle(color: _slate)),
       ]),
       footer: (ctx) => pw.Row(children: [
-        pw.Text('Laundry Desk by BrotriX Technologies', style: const pw.TextStyle(fontSize: 8, color: _slate)),
+        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 8, color: _slate)),
         pw.Spacer(),
         pw.Text('Page ${ctx.pageNumber}/${ctx.pagesCount}', style: const pw.TextStyle(fontSize: 8, color: _slate)),
       ]),
@@ -362,7 +362,7 @@ class ExportService {
           pw.Text('Owner: ____________'),
         ]),
         pw.SizedBox(height: 8),
-        pw.Text('Laundry Desk by BrotriX Technologies', style: const pw.TextStyle(fontSize: 7, color: _slate)),
+        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 7, color: _slate)),
       ]),
     ));
     return doc.save();
@@ -434,7 +434,7 @@ class ExportService {
         pw.Spacer(),
         pw.Text('Wash & fold  -  Dry clean  -  Steam iron  -  Home pickup & delivery', style: const pw.TextStyle(fontSize: 12, color: _slate)),
         pw.SizedBox(height: 6),
-        pw.Text('Laundry Desk by BrotriX Technologies', style: const pw.TextStyle(fontSize: 9, color: _slate)),
+        pw.Text('LaundryCase by BrotriX Technologies', style: const pw.TextStyle(fontSize: 9, color: _slate)),
       ]),
     ));
     return doc.save();

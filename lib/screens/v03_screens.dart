@@ -527,7 +527,7 @@ class BackupCard extends StatelessWidget {
             final now = DateTime.now();
             await Share.shareXFiles(
               [XFile.fromData(Uint8List.fromList(utf8.encode(raw)), name: 'laundry-desk-backup-${dayKey(now)}.json', mimeType: 'application/json')],
-              subject: 'Laundry Desk backup',
+              subject: 'LaundryCase backup',
             );
           },
           icon: const Icon(Icons.download_outlined),
@@ -546,7 +546,7 @@ class BackupCard extends StatelessWidget {
               j = Map<String, dynamic>.from(jsonDecode(utf8.decode(bytes)) as Map);
               if (j['app'] != 'laundry-desk' || j['data'] is! Map) throw const FormatException();
             } catch (_) {
-              if (context.mounted) toast(context, L(app, 'This is not a Laundry Desk backup file.', 'यह Laundry Desk की बैकअप फ़ाइल नहीं है।'));
+              if (context.mounted) toast(context, L(app, 'This is not a LaundryCase backup file.', 'यह Laundry Desk की बैकअप फ़ाइल नहीं है।'));
               return;
             }
             if (!context.mounted) return;

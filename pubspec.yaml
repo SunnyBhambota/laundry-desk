@@ -1,7 +1,7 @@
 name: laundry_desk
 description: "Laundry Desk – laundry shop management by BrotriX Technologies."
 publish_to: 'none'
-version: 0.5.0+5
+version: 0.5.1+6
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -54,5 +54,5 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: assets/images/app_icon.png
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#F0F6FD"
   adaptive_icon_foreground: assets/images/app_icon_fg.png
