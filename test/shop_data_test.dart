@@ -128,7 +128,7 @@ void main() {
     expect(msg, contains('Total'));
     expect(d.verifyStaff('+91 98200 44444', '4444')?.id, 'demo_s4');
     expect(d.verifyStaff('9820044444', '1234'), isNull);
-    expect(d.staff.every((s) => !s.pinHash.contains('4444')), isTrue);
+    expect(d.staff.every((s) => s.pinHash.length == 64 && !s.pinHash.startsWith('plain:')), isTrue); // only hashes are stored
     final pdf = await ExportService.billPdf(shop: shop, data: d, o: d.orders.first);
     expect(pdf.length, greaterThan(1000));
     final tags = await ExportService.tagsPdf(shop: shop, data: d, o: d.orders.first);
