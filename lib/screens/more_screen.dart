@@ -172,7 +172,7 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
         ]),
         const SizedBox(height: 10),
-        const DesignerFooter(),
+        const BrotrixFooter(),
       ]),
     );
   }

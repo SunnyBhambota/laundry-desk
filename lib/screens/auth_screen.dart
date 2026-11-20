@@ -241,7 +241,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: LD.slate)),
                     ),
                   const SizedBox(height: 4),
-                  const DesignerFooter(),
+                  const BrotrixFooter(),
                 ]),
               ),
             ),

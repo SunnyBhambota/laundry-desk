@@ -516,7 +516,7 @@ Future<void> openAppAdmin(BuildContext context) async {
   showDialog<void>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('App admin'),
+      title: const Text('BrotriX admin'),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(L(app, 'This account is not the app admin. To make it admin (one time):', 'ये अकाउंट ऐप एडमिन नहीं है। एडमिन बनाने के लिए (एक बार):')),
         const SizedBox(height: 8),

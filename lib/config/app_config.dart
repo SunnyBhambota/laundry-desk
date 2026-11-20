@@ -3,7 +3,7 @@ class AppConfig {
   AppConfig._();
 
   static const appName = 'LaundryCase';
-  static const designer = 'SUNNY BHAMBOTA';
+  static const company = 'BrotriX Technologies';
   static const version = '0.10.0';
 
   /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).

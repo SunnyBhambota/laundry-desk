@@ -123,8 +123,8 @@ class LangToggle extends StatelessWidget {
   }
 }
 
-class DesignerFooter extends StatelessWidget {
-  const DesignerFooter({super.key});
+class BrotrixFooter extends StatelessWidget {
+  const BrotrixFooter({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +132,7 @@ class DesignerFooter extends StatelessWidget {
     return Text.rich(
       TextSpan(children: [
         TextSpan(text: '${t('designedBy')} '),
-        const TextSpan(text: AppConfig.designer, style: TextStyle(fontWeight: FontWeight.w700, color: LD.navy)),
+        const TextSpan(text: AppConfig.company, style: TextStyle(fontWeight: FontWeight.w700, color: LD.navy)),
       ]),
       textAlign: TextAlign.center,
       style: GoogleFonts.inter(fontSize: 11, letterSpacing: .4, color: LD.slate),

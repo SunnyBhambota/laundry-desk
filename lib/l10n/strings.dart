@@ -57,7 +57,7 @@ class S {
     'err.emailUnknown': 'This email is not linked to an account. Log in with your mobile number.',
     'err.cloudOnly': 'Google login works after the cloud is set up.',
     'err.googleOff': 'Google login is not switched on yet. Use mobile + password for now.',
-    'forgotNote': 'Forgot password? If you linked Google (Settings → Security), tap "Google" below and set a new password in Settings. Otherwise call app support.',
+    'forgotNote': 'Forgot password? If you linked Google (Settings → Security), tap "Google" below and set a new password in Settings. Otherwise call BrotriX support.',
     // setup
     'setupTitle': 'Your laundry business',
     'setupSub': 'We’ll set up your rate card and screens from this.',
@@ -189,7 +189,7 @@ class S {
     'err.emailUnknown': 'यह ईमेल किसी अकाउंट से जुड़ा नहीं है। मोबाइल नंबर से लॉगिन करें।',
     'err.cloudOnly': 'Google लॉगिन क्लाउड सेटअप के बाद चलेगा।',
     'err.googleOff': 'Google लॉगिन अभी चालू नहीं है। अभी मोबाइल + पासवर्ड से लॉगिन करें।',
-    'forgotNote': 'पासवर्ड भूल गए? अगर Google जोड़ा है (Settings → Security), तो नीचे "Google" दबाएँ और Settings में नया पासवर्ड बनाएँ। नहीं तो ऐप सपोर्ट को कॉल करें।',
+    'forgotNote': 'पासवर्ड भूल गए? अगर Google जोड़ा है (Settings → Security), तो नीचे "Google" दबाएँ और Settings में नया पासवर्ड बनाएँ। नहीं तो BrotriX सपोर्ट को कॉल करें।',
     'setupTitle': 'आपका लॉन्ड्री बिज़नेस',
     'setupSub': 'इससे हम आपका रेट कार्ड और स्क्रीन तैयार करेंगे।',
     'step2': 'चरण 2 / 2',
