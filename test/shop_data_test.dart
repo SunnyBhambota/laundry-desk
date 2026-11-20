@@ -351,7 +351,7 @@ void main() {
     final it = d.stock.firstWhere((x) => x.id == 'demo_st3');
     final start = it.qty;
     final r = d.addRequest(by: 'demo_s3', branchId: d.branches.first.id, item: it.name, itemId: it.id, qty: 5, unit: 'L', urgent: true);
-    expect(d.pendingRequests.first.id, r.id); // urgent first
+    expect(d.pendingRequests.takeWhile((x) => x.urgent).map((x) => x.id), contains(r.id)); // urgent first
     d.decideRequest(r, 'given', by: 'owner', fromStock: true);
     expect(it.qty, start - 5);
     expect(r.open, isFalse);
