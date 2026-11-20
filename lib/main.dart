@@ -35,7 +35,10 @@ class LaundryDeskApp extends StatelessWidget {
           if (child != null) child,
           if (s.signedIn && s.setupDone && s.locked)
             Positioned.fill(
-              child: Navigator(onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const LockScreen())),
+              // own hero scope: sharing the app's HeroController breaks page "back" after unlocking
+              child: HeroControllerScope.none(
+                child: Navigator(onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const LockScreen())),
+              ),
             ),
         ]),
       ),
