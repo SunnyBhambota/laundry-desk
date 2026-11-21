@@ -521,7 +521,6 @@ void main() {
     expect(d.machines, isEmpty);
     expect(d.loans, isEmpty);
   });
-}
 
   test('v0.12: outside, QC, wallet, claim, party, alteration', () async {
     final shop = ShopProfile(shopName: 'T', services: const ['Wash & fold', 'Alteration'], branches: '1', team: '1', country: 'India', currency: 'INR', gst: false);
