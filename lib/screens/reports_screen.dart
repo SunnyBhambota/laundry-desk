@@ -137,14 +137,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               style: const TextStyle(color: LD.slate, fontWeight: FontWeight.w600)),
         ],
         const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.9,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          children: [
+        AdaptiveGrid(cols: 2, height: 92, spacing: 10,
+                children: [
             kpi(t('collected'), money(r.collected, cur), color: const Color(0xFF146C43)),
             kpi(t('sales'), money(r.sales, cur)),
             kpi(t('orders'), '${r.orderCount} · ${r.pieces} ${t('pcs')}'),

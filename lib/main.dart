@@ -42,15 +42,10 @@ class LaundryDeskApp extends StatelessWidget {
           colorFilter: s.dark ? const ColorFilter.matrix(darkMatrix) : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
           child: Stack(children: [
           if (child != null)
-            Container(
-              color: const Color(0xFFE9EEF5),
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: MediaQuery(
-                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
-                  child: child,
-                ),
+            _WideFrame(
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
+                child: child,
               ),
             ),
           if (s.signedIn && s.setupDone && s.locked)
@@ -66,6 +61,33 @@ class LaundryDeskApp extends StatelessWidget {
             builder: (_, __) => ExpiryService.instance.expired ? const Positioned.fill(child: ExpiredScreen()) : const SizedBox.shrink(),
           ),
         ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Laptop / big window: the app sits in a rounded "window" on a branded backdrop. Phones are untouched.
+class _WideFrame extends StatelessWidget {
+  const _WideFrame({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w < 900) return child;
+    final big = w > 1320;
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF01245A), Color(0xFF0189D5)]),
+      ),
+      padding: EdgeInsets.symmetric(vertical: big ? 18 : 0, horizontal: big ? 24 : 0),
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: big ? 1400 : double.infinity),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(big ? 22 : 0),
+          child: ColoredBox(color: const Color(0xFFF4F8FC), child: child),
         ),
       ),
     );

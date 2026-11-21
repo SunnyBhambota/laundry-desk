@@ -7,6 +7,35 @@ import '../config/app_config.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
+/// A grid whose cards keep their height: on a phone it looks like a normal 2/3/4 column grid,
+/// on a wide screen it adds columns instead of stretching the cards.
+class AdaptiveGrid extends StatelessWidget {
+  const AdaptiveGrid({super.key, required this.cols, required this.height, required this.children, this.spacing = 12});
+  final int cols;
+  final double height;
+  final double spacing;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        final w = c.maxWidth.isFinite ? c.maxWidth : 358.0;
+        final card0 = (358 - spacing * (cols - 1)) / cols;
+        var n = ((w + spacing) / (card0 + spacing)).floor();
+        n = n.clamp(cols, children.length < cols ? cols : children.length);
+        final cardW = (w - spacing * (n - 1)) / n;
+        return GridView.count(
+          crossAxisCount: n,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: spacing,
+          mainAxisSpacing: spacing,
+          childAspectRatio: cardW / height,
+          padding: EdgeInsets.zero,
+          children: children,
+        );
+      });
+}
+
 /// Dark mode is an inverted colour filter over the whole app; photos and the logo get the same
 /// filter again so they look normal (two inversions cancel out).
 const List<double> darkMatrix = <double>[

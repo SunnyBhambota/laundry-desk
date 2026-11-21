@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../data/ops_models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import 'customers_screen.dart';
 import 'dashboard_screen.dart';
 import 'delivery_screen.dart';
@@ -140,6 +141,9 @@ class _ShellState extends State<Shell> {
             onDestinationSelected: (i) => setState(() => _tab = i),
             labelType: NavigationRailLabelType.all,
             backgroundColor: Colors.white,
+            minWidth: 92,
+            indicatorColor: const Color(0xFFDCEBFA),
+            leading: const Padding(padding: EdgeInsets.fromLTRB(0, 18, 0, 14), child: LogoMark(size: 46)),
             destinations: [
               for (final tab in tabs)
                 NavigationRailDestination(

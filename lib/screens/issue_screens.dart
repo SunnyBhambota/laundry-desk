@@ -713,14 +713,8 @@ class _IssueReportsScreenState extends State<IssueReportsScreen> {
             ),
         ]),
         const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 2.1,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          children: [
+        AdaptiveGrid(cols: 2, height: 84, spacing: 10,
+                children: [
             kpi(L(app, 'Total issues', 'कुल इश्यू'), '${list.length}'),
             kpi(L(app, 'Open now', 'अभी खुले'), '${open.length}', _red),
             kpi(L(app, 'Complaints / re-wash', 'शिकायत / दोबारा धुलाई'), '$complaints', _orange),

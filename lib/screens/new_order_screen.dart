@@ -169,13 +169,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
             if (garments.isEmpty)
               Text(t('noRate'), style: const TextStyle(color: LD.slate))
             else
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1.25,
+              AdaptiveGrid(cols: 3, height: 92, spacing: 8,
                 children: [
                   for (final g in garments)
                     _GarmentTile(

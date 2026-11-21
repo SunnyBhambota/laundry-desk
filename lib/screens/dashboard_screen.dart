@@ -188,14 +188,7 @@ class DashboardScreen extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.45,
-                padding: EdgeInsets.zero,
+              AdaptiveGrid(cols: 2, height: 120, spacing: 12,
                 children: [
                   kpi(t('todayCollection'), money(today.collected, cur), '${d.ordersIn(scope).expand((o) => o.payments).where((p) => DateRange.of(Period.today).has(p.at)).length} ${t('payments').toLowerCase()}',
                       const Color(0xFF146C43), app.canManage ? () => go(const ReportsScreen()) : () {}),
@@ -323,14 +316,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: .95,
-                padding: EdgeInsets.zero,
+              AdaptiveGrid(cols: 4, height: 88, spacing: 8,
                 children: [
                   quick(Icons.add_rounded, t('qOrder'), () => go(const NewOrderScreen())),
                   quick(Icons.people_outline, t('customers'), () => go(const CustomersScreen())),
