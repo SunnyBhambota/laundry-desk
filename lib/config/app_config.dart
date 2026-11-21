@@ -4,7 +4,7 @@ class AppConfig {
 
   static const appName = 'LaundryCase';
   static const company = 'BrotriX Technologies';
-  static const version = '0.13.0';
+  static const version = '0.13.1';
 
   /// Test builds expire [testDays] days after the build (set by CI: --dart-define=BUILD_EPOCH).
   static const buildEpoch = int.fromEnvironment('BUILD_EPOCH', defaultValue: 0);
