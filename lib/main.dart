@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -41,9 +42,16 @@ class LaundryDeskApp extends StatelessWidget {
           colorFilter: s.dark ? const ColorFilter.matrix(darkMatrix) : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
           child: Stack(children: [
           if (child != null)
-            MediaQuery(
-              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
-              child: child,
+            Container(
+              color: const Color(0xFFE9EEF5),
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(MediaQuery.of(context).textScaler.scale(1) * s.textScale)),
+                  child: child,
+                ),
+              ),
             ),
           if (s.signedIn && s.setupDone && s.locked)
             Positioned.fill(
@@ -83,9 +91,9 @@ class ExpiredScreen extends StatelessWidget {
               const Text('Test versions work for ${AppConfig.testDays} days. Please install the latest version, or contact ${AppConfig.company}.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF5B6B82))),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () => openUrl(AppConfig.latestApkUrl),
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Download latest version'),
+                onPressed: () => openUrl(kIsWeb ? Uri.base.toString() : AppConfig.latestApkUrl),
+                icon: Icon(kIsWeb ? Icons.refresh_rounded : Icons.download_rounded),
+                label: Text(kIsWeb ? 'Reload the page' : 'Download latest version'),
               ),
               const SizedBox(height: 14),
               Text('v${AppConfig.version}', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),

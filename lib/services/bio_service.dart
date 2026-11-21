@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -9,6 +10,7 @@ class BioService {
 
   /// Phone has a fingerprint/face sensor with something enrolled.
   Future<bool> available() async {
+    if (kIsWeb) return false;
     try {
       if (!await _auth.isDeviceSupported()) return false;
       if (!await _auth.canCheckBiometrics) return false;

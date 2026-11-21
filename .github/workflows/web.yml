@@ -1,0 +1,45 @@
+name: Build and publish web app
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Web project
+        run: flutter create --org com.brotrix --project-name laundry_desk --platforms web .
+      - run: flutter pub get
+      - name: Web icons
+        run: dart run flutter_launcher_icons -f flutter_launcher_icons-web.yaml
+      - name: Page title
+        run: |
+          sed -i 's#<title>.*</title>#<title>LaundryCase</title>#' web/index.html
+          sed -i 's#"name": *"[^"]*"#"name": "LaundryCase"#; s#"short_name": *"[^"]*"#"short_name": "LaundryCase"#' web/manifest.json
+      - name: Build web
+        run: flutter build web --release --base-href /laundry-desk/ --dart-define=BUILD_EPOCH=$(date +%s)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+      - id: deploy
+        uses: actions/deploy-pages@v4

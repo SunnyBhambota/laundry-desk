@@ -15,6 +15,8 @@ class AppConfig {
   /// If these are emptied the app runs in DEMO MODE (data only on this phone).
   static const firebaseApiKey = 'AIzaSyBxkZ9Uoa-025gof-DtFOFF4jBWJbCX0ms';
   static const firebaseAppId = '1:356269298314:android:3a9979a0c3eca1578f5373';
+  /// Web app id (Firebase console → Project settings → Your apps → Web). Empty = reuse the Android id.
+  static const firebaseWebAppId = '';
   static const firebaseSenderId = '356269298314';
   static const firebaseProjectId = 'laundry-desk-4308f';
   static const firebaseStorageBucket = 'laundry-desk-4308f.firebasestorage.app';

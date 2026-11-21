@@ -131,6 +131,30 @@ class _ShellState extends State<Shell> {
       );
     }
 
+    // laptop / wide window: menu on the left instead of at the bottom
+    if (MediaQuery.of(context).size.width >= 760) {
+      return Scaffold(
+        body: Row(children: [
+          NavigationRail(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            labelType: NavigationRailLabelType.all,
+            backgroundColor: Colors.white,
+            destinations: [
+              for (final tab in tabs)
+                NavigationRailDestination(
+                  icon: Icon(tab.center ? Icons.add_circle_outline_rounded : tab.icon),
+                  selectedIcon: Icon(tab.center ? Icons.add_circle_rounded : tab.icon),
+                  label: Text(tab.label),
+                ),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(child: IndexedStack(index: _tab, children: [for (final tab in tabs) tab.page])),
+        ]),
+      );
+    }
+
     return Scaffold(
       body: IndexedStack(index: _tab, children: [for (final tab in tabs) tab.page]),
       bottomNavigationBar: Container(

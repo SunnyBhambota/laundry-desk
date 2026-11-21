@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Phone notifications made by the app itself (free, no server):
@@ -10,7 +11,7 @@ class NotifyService {
   int _id = 1;
 
   Future<void> init() async {
-    if (_ready) return;
+    if (_ready || kIsWeb) return;
     try {
       await _p.initialize(const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')));
       await _p.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();

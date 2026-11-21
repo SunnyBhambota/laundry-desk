@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'dart:math';
 
@@ -41,7 +42,8 @@ class AuthService {
       await Firebase.initializeApp(
         options: FirebaseOptions(
           apiKey: AppConfig.firebaseApiKey,
-          appId: AppConfig.firebaseAppId,
+          appId: kIsWeb && AppConfig.firebaseWebAppId.isNotEmpty ? AppConfig.firebaseWebAppId : AppConfig.firebaseAppId,
+          authDomain: kIsWeb ? '${AppConfig.firebaseProjectId}.firebaseapp.com' : null,
           messagingSenderId: AppConfig.firebaseSenderId,
           projectId: AppConfig.firebaseProjectId,
           storageBucket: AppConfig.firebaseStorageBucket.isEmpty ? null : AppConfig.firebaseStorageBucket,
@@ -49,7 +51,9 @@ class AuthService {
       );
       // work without internet: keep everything on the phone, send when back online
       try {
-        FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+        FirebaseFirestore.instance.settings = kIsWeb
+            ? const Settings(persistenceEnabled: false)
+            : const Settings(persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
       } catch (_) {}
       _cloud = true;
     } catch (_) {
@@ -208,20 +212,30 @@ class AuthService {
   Future<Owner?> signInWithGoogle() async {
     if (!_cloud) throw AuthError('cloudOnly');
     try {
-      final g = GoogleSignIn(serverClientId: AppConfig.googleWebClientId, scopes: const ['email']);
-      try {
-        await g.signOut(); // always show the account chooser
-      } catch (_) {}
-      final acc = await g.signIn();
-      if (acc == null) return null;
-      final auth = await acc.authentication;
-      final cred = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
-      final res = await FirebaseAuth.instance.signInWithCredential(cred);
-      final u = res.user!;
+      String accName = '', accEmail = '';
+      final User u;
+      if (kIsWeb) {
+        // browser: Google pop-up through Firebase
+        final res = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider()..addScope('email'));
+        u = res.user!;
+      } else {
+        final g = GoogleSignIn(serverClientId: AppConfig.googleWebClientId, scopes: const ['email']);
+        try {
+          await g.signOut(); // always show the account chooser
+        } catch (_) {}
+        final acc = await g.signIn();
+        if (acc == null) return null;
+        accName = acc.displayName ?? '';
+        accEmail = acc.email;
+        final auth = await acc.authentication;
+        final cred = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
+        final res = await FirebaseAuth.instance.signInWithCredential(cred);
+        u = res.user!;
+      }
       final ref = FirebaseFirestore.instance.collection('owners').doc(u.uid);
       final doc = await ref.get();
       if (!doc.exists) {
-        final owner = Owner(uid: u.uid, name: u.displayName ?? acc.displayName ?? '', mobile: '', email: u.email ?? acc.email);
+        final owner = Owner(uid: u.uid, name: u.displayName ?? accName, mobile: '', email: u.email ?? accEmail);
         await ref.set({...owner.toJson(), 'via': 'google', 'createdAt': FieldValue.serverTimestamp()});
         return owner;
       }
@@ -273,6 +287,10 @@ class AuthService {
     final u = FirebaseAuth.instance.currentUser;
     if (u == null) throw AuthError('generic');
     try {
+      if (kIsWeb) {
+        await u.linkWithPopup(GoogleAuthProvider()..addScope('email'));
+        return true;
+      }
       final g = GoogleSignIn(serverClientId: AppConfig.googleWebClientId, scopes: const ['email']);
       try {
         await g.signOut();

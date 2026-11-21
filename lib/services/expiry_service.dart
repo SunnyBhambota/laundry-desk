@@ -35,7 +35,7 @@ class ExpiryService extends ChangeNotifier {
 
   /// Asks a web server for the real time (when online), so changing the phone date does not help.
   Future<void> syncServerTime() async {
-    if (expiresAt == null) return;
+    if (expiresAt == null || kIsWeb) return; // browsers block this request (CORS); the phone clock is used
     try {
       final r = await http.head(Uri.parse('https://github.com')).timeout(const Duration(seconds: 4));
       final h = r.headers['date'];
