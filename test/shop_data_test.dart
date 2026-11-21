@@ -8,6 +8,7 @@ import 'package:laundry_desk/data/reports.dart';
 import 'package:laundry_desk/data/sample_data.dart';
 import 'package:laundry_desk/data/shop_data.dart';
 import 'package:laundry_desk/data/shop_v12.dart';
+import 'package:laundry_desk/services/expiry_service.dart';
 import 'package:laundry_desk/data/shop_v13.dart';
 import 'package:laundry_desk/logic/messages.dart';
 import 'package:laundry_desk/models/models.dart';
@@ -590,5 +591,12 @@ void main() {
     expect(d.freeRacks.contains(4), isFalse);
     d.addChat(o, from: 'customer', text: 'Please starch collars', by: 'owner');
     expect(LaundryOrder.fromJson(o.toJson()).chat.length, 1);
+  });
+
+  test('test build never expires without a build time', () {
+    // local runs have BUILD_EPOCH = 0: no expiry
+    ExpiryService.instance.check();
+    expect(ExpiryService.instance.expired, isFalse);
+    expect(ExpiryService.instance.daysLeft, isNull);
   });
 }

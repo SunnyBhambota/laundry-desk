@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/app_config.dart';
+import '../services/expiry_service.dart';
 import '../data/ops_models.dart';
 import '../services/auth_service.dart';
 import '../state/app_state.dart';
@@ -169,6 +170,7 @@ class _MoreScreenState extends State<MoreScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline_rounded, color: LD.primary),
             title: Text(t('version'), style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: ExpiryService.instance.daysLeft == null ? null : Text(L(app, 'Test version: stops working in ${ExpiryService.instance.daysLeft} days', 'टेस्ट वर्ज़न: ${ExpiryService.instance.daysLeft} दिन में बंद हो जाएगा')),
             trailing: const Text(AppConfig.version),
             onTap: app.isOwner
                 ? () {

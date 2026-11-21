@@ -6,6 +6,11 @@ class AppConfig {
   static const company = 'BrotriX Technologies';
   static const version = '0.13.0';
 
+  /// Test builds expire [testDays] days after the build (set by CI: --dart-define=BUILD_EPOCH).
+  static const buildEpoch = int.fromEnvironment('BUILD_EPOCH', defaultValue: 0);
+  static const testDays = 7;
+  static const latestApkUrl = 'https://github.com/SunnyBhambota/laundry-desk/releases/latest/download/laundry-desk.apk';
+
   /// Firebase project laundry-desk-4308f (Android app com.brotrix.laundry).
   /// If these are emptied the app runs in DEMO MODE (data only on this phone).
   static const firebaseApiKey = 'AIzaSyBxkZ9Uoa-025gof-DtFOFF4jBWJbCX0ms';
