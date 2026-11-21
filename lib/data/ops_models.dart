@@ -73,7 +73,10 @@ class Customer {
     this.dob,
     this.referredBy = '',
     this.referralPaid = false,
+    this.wallet = 0,
+    List<Map<String, dynamic>>? walletLog,
   })  : packages = packages ?? [],
+        walletLog = walletLog ?? [],
         createdAt = createdAt ?? DateTime.now();
 
   final String id;
@@ -90,6 +93,8 @@ class Customer {
   DateTime? dob; // birthday (year not important)
   String referredBy; // customer id who brought this customer
   bool referralPaid; // referral points given
+  double wallet; // advance / store credit balance
+  final List<Map<String, dynamic>> walletLog; // {amount, note, at, by}
 
   bool get hasLocation => lat != null && lng != null;
   CustPackage? activePackage(String service, String unit) => packages
@@ -111,6 +116,8 @@ class Customer {
         if (dob != null) 'dob': dob!.toIso8601String(),
         if (referredBy.isNotEmpty) 'referredBy': referredBy,
         if (referralPaid) 'referralPaid': true,
+        if (wallet != 0) 'wallet': wallet,
+        if (walletLog.isNotEmpty) 'walletLog': walletLog,
       };
   factory Customer.fromJson(Map<String, dynamic> j) => Customer(
         id: j['id'] as String,
@@ -127,6 +134,8 @@ class Customer {
         dob: DateTime.tryParse(j['dob'] as String? ?? ''),
         referredBy: j['referredBy'] as String? ?? '',
         referralPaid: j['referralPaid'] as bool? ?? false,
+        wallet: (j['wallet'] as num?)?.toDouble() ?? 0,
+        walletLog: ((j['walletLog'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
       );
 }
 
@@ -734,9 +743,18 @@ class LaundryOrder {
     this.packageNote = '',
     this.slot = '',
     this.pickupAt,
+    this.outTo = '',
+    this.outCost = 0,
+    this.outSentAt,
+    this.outBackAt,
+    this.qcAt,
+    this.qcBy = '',
+    this.qcNote = '',
+    List<Map<String, dynamic>>? claims,
     List<Payment>? payments,
     List<StatusEvent>? history,
   })  : payments = payments ?? [],
+        claims = claims ?? [],
         history = history ?? [];
 
   final String id;
@@ -768,6 +786,20 @@ class LaundryOrder {
   String packageNote;
   String slot; // pickup slot e.g. 12–3
   DateTime? pickupAt;
+  // sent to another dry cleaner / tailor
+  String outTo;
+  double outCost;
+  DateTime? outSentAt;
+  DateTime? outBackAt;
+  // quality check before delivery
+  DateTime? qcAt;
+  String qcBy;
+  String qcNote;
+  // damage / loss claims: {kind: damaged|lost, piece, amount, note, at, by}
+  final List<Map<String, dynamic>> claims;
+  bool get outsideNow => outTo.isNotEmpty && outBackAt == null;
+  bool get qcDone => qcAt != null;
+  double get claimTotal => claims.fold<double>(0, (s, c) => s + ((c['amount'] as num?)?.toDouble() ?? 0));
   double get offers => couponAmount + pointsUsed + packageValue;
   final List<Payment> payments;
   final List<StatusEvent> history;
@@ -827,6 +859,14 @@ class LaundryOrder {
         'packageNote': packageNote,
         'slot': slot,
         'pickupAt': pickupAt?.toIso8601String(),
+        if (outTo.isNotEmpty) 'outTo': outTo,
+        if (outCost > 0) 'outCost': outCost,
+        if (outSentAt != null) 'outSentAt': outSentAt!.toIso8601String(),
+        if (outBackAt != null) 'outBackAt': outBackAt!.toIso8601String(),
+        if (qcAt != null) 'qcAt': qcAt!.toIso8601String(),
+        if (qcBy.isNotEmpty) 'qcBy': qcBy,
+        if (qcNote.isNotEmpty) 'qcNote': qcNote,
+        if (claims.isNotEmpty) 'claims': claims,
         'payments': payments.map((p) => p.toJson()).toList(),
         'history': history.map((h) => h.toJson()).toList(),
       };
@@ -861,6 +901,14 @@ class LaundryOrder {
         packageNote: j['packageNote'] as String? ?? '',
         slot: j['slot'] as String? ?? '',
         pickupAt: DateTime.tryParse(j['pickupAt'] as String? ?? ''),
+        outTo: j['outTo'] as String? ?? '',
+        outCost: (j['outCost'] as num?)?.toDouble() ?? 0,
+        outSentAt: DateTime.tryParse(j['outSentAt'] as String? ?? ''),
+        outBackAt: DateTime.tryParse(j['outBackAt'] as String? ?? ''),
+        qcAt: DateTime.tryParse(j['qcAt'] as String? ?? ''),
+        qcBy: j['qcBy'] as String? ?? '',
+        qcNote: j['qcNote'] as String? ?? '',
+        claims: ((j['claims'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
         payments: ((j['payments'] as List?) ?? []).map((e) => Payment.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         history: ((j['history'] as List?) ?? []).map((e) => StatusEvent.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
       );

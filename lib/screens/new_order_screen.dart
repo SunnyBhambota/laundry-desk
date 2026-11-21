@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import '../data/shop_v12.dart';
 import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
@@ -341,8 +343,22 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                 if (tax > 0) Text('${t('tax')} ${money(tax, cur)}', style: const TextStyle(fontSize: 11, color: LD.slate)),
               ]),
             ),
+            if (_lines.isNotEmpty)
+              IconButton(
+                tooltip: L(app, 'Share estimate (quote)', 'अनुमान (कोटेशन) भेजें'),
+                icon: const Icon(Icons.request_quote_outlined, color: LD.primary),
+                onPressed: () {
+                  final text = d.estimateText(
+                      shopName: app.shop!.shopName, currency: cur, lines: _lines, subtotal: subtotal, express: expressAmt, tax: tax, total: total, due: due);
+                  if ((_customer?.phone ?? '').isNotEmpty) {
+                    openWhatsApp(_customer!.phone, text);
+                  } else {
+                    Share.share(text);
+                  }
+                },
+              ),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: LD.navy, minimumSize: const Size(170, 52), shape: const StadiumBorder()),
+              style: FilledButton.styleFrom(backgroundColor: LD.navy, minimumSize: const Size(150, 52), shape: const StadiumBorder()),
               onPressed: () => _create(context),
               icon: const Icon(Icons.check_rounded),
               label: Text(t('createOrder')),

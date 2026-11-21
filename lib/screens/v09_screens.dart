@@ -15,6 +15,7 @@ import '../widgets/common.dart';
 import '../widgets/ui.dart';
 import 'customers_screen.dart';
 import 'order_detail_screen.dart';
+import 'v12_screens.dart';
 
 // ======================= garment photos =======================
 
@@ -349,6 +350,8 @@ class CustomerMoreCard extends StatelessWidget {
       last.putIfAbsent('${h.$2.garment}|${h.$2.service}', () => h);
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      WalletCard(customerId: c.id),
+      const SizedBox(height: 12),
       SectionCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Wrap(spacing: 16, runSpacing: 6, children: [

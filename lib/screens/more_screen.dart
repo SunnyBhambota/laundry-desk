@@ -21,6 +21,8 @@ import 'v06_screens.dart';
 import 'v08_screens.dart';
 import 'v09_screens.dart';
 import 'v10_screens.dart';
+import 'v12_screens.dart';
+import '../data/shop_v12.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -133,6 +135,11 @@ class _MoreScreenState extends State<MoreScreen> {
                 sub: d.machinesDue.isEmpty ? null : '${d.machinesDue.length} ${L(app, 'need attention', 'ध्यान चाहिए')}'),
             if (app.role != Role.delivery) tile(Icons.speed_outlined, L(app, 'Meter readings (light, water, gas)', 'मीटर रीडिंग (बिजली, पानी, गैस)'), () => go(const MetersScreen())),
             tile(Icons.dark_mode_outlined, L(app, app.dark ? 'Dark mode: ON (tap for light)' : 'Dark mode: OFF (tap to turn on)', app.dark ? 'डार्क मोड: चालू (लाइट के लिए दबाएँ)' : 'डार्क मोड: बंद (चालू करने के लिए दबाएँ)'), () => app.setDark(!app.dark)),
+            if (app.role != Role.delivery && app.role != Role.washer) tile(Icons.north_east_rounded, L(app, 'Outside work (dry cleaner / tailor)', 'बाहर का काम (ड्राई क्लीनर / दर्ज़ी)'), () => go(const OutsideScreen()),
+                sub: d.outsideOrders.isEmpty ? null : '${d.outsideOrders.length} ${L(app, 'outside now', 'अभी बाहर')}'),
+            if (app.canManage) tile(Icons.report_problem_outlined, L(app, 'Damage / loss claims', 'नुकसान / खोने के क्लेम'), () => go(const ClaimsScreen())),
+            if (app.canManage) tile(Icons.apartment_outlined, L(app, 'Party bills (hotel / company)', 'पार्टी बिल (होटल / कंपनी)'), () => go(const PartyBillsScreen())),
+            if (app.isOwner && !d.hasAlteration) tile(Icons.content_cut_rounded, L(app, 'Add Alteration / tailoring service', 'अल्टरेशन / सिलाई सर्विस जोड़ें'), () => enableAlterationFlow(context, app)),
             tile(Icons.text_increase_rounded, L(app, 'Text size', 'अक्षर का साइज़'), () => textSizeSheet(context, app), sub: app.textScale == 1 ? L(app, 'Normal', 'सामान्य') : '${(app.textScale * 100).round()}%'),
             tile(Icons.inbox_outlined, app.canManage ? L(app, 'Staff requests & leave', 'स्टाफ की माँग और छुट्टी') : L(app, 'Ask the boss (things / leave)', 'बॉस से माँगें (चीज़ / छुट्टी)'),
                 () => go(const RequestsScreen()),

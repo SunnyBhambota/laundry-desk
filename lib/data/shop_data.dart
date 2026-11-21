@@ -225,7 +225,7 @@ class ShopData extends ChangeNotifier {
     shopCode = _code();
     taxPct = shop.gst ? 18 : 0;
     branches = [Branch(id: 'b_main', name: shop.address.isEmpty ? 'Main branch' : shop.address.split(',').first.trim())];
-    garments = DefaultRates.garments.map((g) => Garment.fromJson(g.toJson())).toList();
+    garments = [...DefaultRates.garments, if (shop.services.contains('Alteration')) ...DefaultRates.alterations].map((g) => Garment.fromJson(g.toJson())).toList();
     rates = DefaultRates.defaultRates(shop.services, currencyFactor: DefaultRates.currencyFactor[shop.currency] ?? 1);
     await _registerIndex();
     if (sample) {

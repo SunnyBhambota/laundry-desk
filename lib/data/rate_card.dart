@@ -34,6 +34,19 @@ class DefaultRates {
     Garment(id: 'g_kg', name: 'Mixed clothes', unit: 'kg', category: 'Other'),
   ];
 
+  /// Tailoring / alteration jobs (service "Alteration").
+  static final alterations = <Garment>[
+    Garment(id: 'g_alt_hem', name: 'Hem / length', category: 'Alteration'),
+    Garment(id: 'g_alt_zip', name: 'Zip change', category: 'Alteration'),
+    Garment(id: 'g_alt_button', name: 'Button fix', category: 'Alteration'),
+    Garment(id: 'g_alt_patch', name: 'Patch / darning', category: 'Alteration'),
+    Garment(id: 'g_alt_fit', name: 'Fitting (in/out)', category: 'Alteration'),
+    Garment(id: 'g_alt_blouse', name: 'Blouse stitching', category: 'Alteration'),
+  ];
+  static const altPrice = <String, double>{
+    'g_alt_hem': 80, 'g_alt_zip': 120, 'g_alt_button': 15, 'g_alt_patch': 60, 'g_alt_fit': 150, 'g_alt_blouse': 400,
+  };
+
   /// Base dry-clean price per garment.
   static const _dry = <String, double>{
     'g_shirt': 80, 'g_tshirt': 70, 'g_trouser': 90, 'g_jeans': 100, 'g_kurta': 90, 'g_suit2': 299,
@@ -45,6 +58,7 @@ class DefaultRates {
 
   /// Which services make sense for which garment, and the price factor vs dry clean.
   static double? price(String garmentId, String service) {
+    if (service == 'Alteration') return altPrice[garmentId];
     final d = _dry[garmentId];
     if (d == null) return null;
     final isKg = garmentId == 'g_kg';
@@ -84,7 +98,7 @@ class DefaultRates {
   /// key "garmentId|service" → price, for the services this shop offers.
   static Map<String, double> defaultRates(List<String> services, {double currencyFactor = 1}) {
     final m = <String, double>{};
-    for (final g in garments) {
+    for (final g in [...garments, ...alterations]) {
       for (final s in services) {
         final p = price(g.id, s);
         if (p != null) m['${g.id}|$s'] = (p * currencyFactor * 100).round() / 100;

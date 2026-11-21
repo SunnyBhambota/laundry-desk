@@ -7,6 +7,7 @@ import 'package:laundry_desk/data/rate_card.dart';
 import 'package:laundry_desk/data/reports.dart';
 import 'package:laundry_desk/data/sample_data.dart';
 import 'package:laundry_desk/data/shop_data.dart';
+import 'package:laundry_desk/data/shop_v12.dart';
 import 'package:laundry_desk/logic/messages.dart';
 import 'package:laundry_desk/models/models.dart';
 import 'package:laundry_desk/services/export_service.dart';
@@ -522,3 +523,40 @@ void main() {
   });
 }
 
+  test('v0.12: outside, QC, wallet, claim, party, alteration', () async {
+    final shop = ShopProfile(shopName: 'T', services: const ['Wash & fold', 'Alteration'], branches: '1', team: '1', country: 'India', currency: 'INR', gst: false);
+    final d = await ShopData.open('t12');
+    await d.initialise(shop);
+    expect(d.hasAlteration, isTrue);
+    expect(d.rates.containsKey('g_alt_hem|Alteration'), isTrue);
+    final c = d.addCustomer(name: 'Hotel Sun', phone: '9876543210');
+    c.type = 'business';
+    expect(d.partyCustomers.length, 1);
+    final g = d.garments.firstWhere((x) => x.id == 'g_alt_hem');
+    final o = d.createOrder(
+      customerId: c.id,
+      branchId: d.branches.first.id,
+      lines: [OrderLine(garment: g.name, service: 'Alteration', qty: 2, rate: 80)],
+      by: 'owner',
+    );
+    expect(o.total, 160);
+    d.sendOutside(o, 'Tailor Raju', 50, by: 'owner');
+    expect(d.outsideOrders.length, 1);
+    d.receiveOutside(o, by: 'owner');
+    expect(d.outsideOrders, isEmpty);
+    expect(d.outsideCostIn(DateTime(2000), DateTime(2100)), 50);
+    d.doQc(o, by: 'owner', note: 'ok');
+    expect(o.qcDone, isTrue);
+    d.walletTopUp(c, 100, by: 'owner');
+    expect(d.payFromWallet(o, by: 'owner'), 100);
+    expect(c.wallet, 0);
+    expect(o.due, 60);
+    d.addClaim(o, kind: 'lost', piece: 'shirt', amount: 40, by: 'owner');
+    expect(o.due, 20);
+    final back = LaundryOrder.fromJson(o.toJson());
+    expect(back.claims.length, 1);
+    expect(back.outTo, 'Tailor Raju');
+    expect(Customer.fromJson(c.toJson()).walletLog.length, 2);
+    expect(d.estimateText(shopName: 'T', currency: 'INR', lines: o.lines, subtotal: 160, express: 0, tax: 0, total: 160, due: DateTime.now()), contains('Total'));
+  });
+}

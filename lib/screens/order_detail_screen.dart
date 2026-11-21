@@ -15,6 +15,7 @@ import 'live_map_screen.dart';
 import 'v08_screens.dart';
 import 'new_order_screen.dart';
 import 'v09_screens.dart';
+import 'v12_screens.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -210,6 +211,8 @@ class OrderDetailScreen extends StatelessWidget {
         OrderRatingCard(orderId: o.id),
         if (o.status == 'delivered') const SizedBox(height: 12),
         OrderPhotosCard(orderId: o.id),
+        const SizedBox(height: 12),
+        OrderOpsCard(orderId: o.id),
         const SizedBox(height: 12),
         // details
         SectionCard(
