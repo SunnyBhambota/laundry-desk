@@ -74,6 +74,7 @@ class Customer {
     this.referredBy = '',
     this.referralPaid = false,
     this.wallet = 0,
+    this.repeat,
     List<Map<String, dynamic>>? walletLog,
   })  : packages = packages ?? [],
         walletLog = walletLog ?? [],
@@ -93,6 +94,7 @@ class Customer {
   DateTime? dob; // birthday (year not important)
   String referredBy; // customer id who brought this customer
   bool referralPaid; // referral points given
+  Map<String, dynamic>? repeat; // regular pickup: {every: days, slot, next: iso date}
   double wallet; // advance / store credit balance
   final List<Map<String, dynamic>> walletLog; // {amount, note, at, by}
 
@@ -117,6 +119,7 @@ class Customer {
         if (referredBy.isNotEmpty) 'referredBy': referredBy,
         if (referralPaid) 'referralPaid': true,
         if (wallet != 0) 'wallet': wallet,
+        if (repeat != null) 'repeat': repeat,
         if (walletLog.isNotEmpty) 'walletLog': walletLog,
       };
   factory Customer.fromJson(Map<String, dynamic> j) => Customer(
@@ -135,6 +138,7 @@ class Customer {
         referredBy: j['referredBy'] as String? ?? '',
         referralPaid: j['referralPaid'] as bool? ?? false,
         wallet: (j['wallet'] as num?)?.toDouble() ?? 0,
+        repeat: j['repeat'] is Map ? Map<String, dynamic>.from(j['repeat'] as Map) : null,
         walletLog: ((j['walletLog'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
       );
 }
@@ -751,10 +755,12 @@ class LaundryOrder {
     this.qcBy = '',
     this.qcNote = '',
     List<Map<String, dynamic>>? claims,
+    List<Map<String, dynamic>>? chat,
     List<Payment>? payments,
     List<StatusEvent>? history,
   })  : payments = payments ?? [],
         claims = claims ?? [],
+        chat = chat ?? [],
         history = history ?? [];
 
   final String id;
@@ -797,6 +803,8 @@ class LaundryOrder {
   String qcNote;
   // damage / loss claims: {kind: damaged|lost, piece, amount, note, at, by}
   final List<Map<String, dynamic>> claims;
+  // notes between shop and customer: {from: shop|customer, text, at, by}
+  final List<Map<String, dynamic>> chat;
   bool get outsideNow => outTo.isNotEmpty && outBackAt == null;
   bool get qcDone => qcAt != null;
   double get claimTotal => claims.fold<double>(0, (s, c) => s + ((c['amount'] as num?)?.toDouble() ?? 0));
@@ -867,6 +875,7 @@ class LaundryOrder {
         if (qcBy.isNotEmpty) 'qcBy': qcBy,
         if (qcNote.isNotEmpty) 'qcNote': qcNote,
         if (claims.isNotEmpty) 'claims': claims,
+        if (chat.isNotEmpty) 'chat': chat,
         'payments': payments.map((p) => p.toJson()).toList(),
         'history': history.map((h) => h.toJson()).toList(),
       };
@@ -909,6 +918,7 @@ class LaundryOrder {
         qcBy: j['qcBy'] as String? ?? '',
         qcNote: j['qcNote'] as String? ?? '',
         claims: ((j['claims'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
+        chat: ((j['chat'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList(),
         payments: ((j['payments'] as List?) ?? []).map((e) => Payment.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
         history: ((j['history'] as List?) ?? []).map((e) => StatusEvent.fromJson(Map<String, dynamic>.from(e as Map))).toList(),
       );

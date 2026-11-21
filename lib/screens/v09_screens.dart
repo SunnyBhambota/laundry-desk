@@ -16,6 +16,7 @@ import '../widgets/ui.dart';
 import 'customers_screen.dart';
 import 'order_detail_screen.dart';
 import 'v12_screens.dart';
+import 'v13_screens.dart';
 
 // ======================= garment photos =======================
 
@@ -351,6 +352,8 @@ class CustomerMoreCard extends StatelessWidget {
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       WalletCard(customerId: c.id),
+      const SizedBox(height: 12),
+      RepeatCard(customerId: c.id),
       const SizedBox(height: 12),
       SectionCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

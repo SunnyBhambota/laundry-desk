@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/shop_v13.dart';
 import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
@@ -37,6 +38,7 @@ Future<bool> changeStatusFlow(BuildContext context, AppState app, LaundryOrder o
             ),
             const SizedBox(height: 6),
             Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final r in d.freeRacks.take(4)) ActionChip(avatar: const Icon(Icons.check_circle_outline, size: 16, color: LD.success), label: Text('${L(app, 'Free', 'खाली')} $r'), onPressed: () => set(() => rack.text = '$r')),
               for (final r in _usedRacks(d)) ActionChip(label: Text(r), onPressed: () => set(() => rack.text = r)),
             ]),
             if ((c?.phone ?? '').isNotEmpty)

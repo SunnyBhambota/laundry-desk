@@ -58,6 +58,8 @@ class ShopData extends ChangeNotifier {
   List<String> trainingItems = ['Billing in the app', 'Tagging clothes', 'Stain types & care labels', 'Machine safety', 'Customer behaviour'];
   Map<String, double> meterRates = {'electricity': 9, 'water': 0.05, 'gas': 0};
   String gstin = '';
+  int slotLimit = 0; // max pickups booked per slot (0 = no limit)
+  int rackCount = 30; // racks / hangers in the shop
   // v0.8 settings
   double dailyTarget = 0; // sales target per day (whole shop or per branch below)
   int dailyOrderTarget = 0;
@@ -157,6 +159,8 @@ class ShopData extends ChangeNotifier {
         'trainingItems': trainingItems,
         'meterRates': meterRates,
         'gstin': gstin,
+        'slotLimit': slotLimit,
+        'rackCount': rackCount,
       };
 
   void applySettings(Map<String, dynamic> j) {
@@ -190,6 +194,8 @@ class ShopData extends ChangeNotifier {
     if (j['trainingItems'] is List) trainingItems = (j['trainingItems'] as List).map((e) => '$e').toList();
     if (j['meterRates'] is Map) meterRates = Map<String, dynamic>.from(j['meterRates'] as Map).map((k, v) => MapEntry(k, (v as num).toDouble()));
     gstin = j['gstin'] as String? ?? gstin;
+    slotLimit = (j['slotLimit'] as num?)?.toInt() ?? slotLimit;
+    rackCount = (j['rackCount'] as num?)?.toInt() ?? rackCount;
   }
 
   void _loyalty(Object? l) {
@@ -339,6 +345,8 @@ class ShopData extends ChangeNotifier {
         'trainingItems': trainingItems,
         'meterRates': meterRates,
         'gstin': gstin,
+        'slotLimit': slotLimit,
+        'rackCount': rackCount,
         'machines': machines.map((e) => e.toJson()).toList(),
         'readings': readings.map((e) => e.toJson()).toList(),
         'staffNotes': staffNotes.map((e) => e.toJson()).toList(),

@@ -16,6 +16,7 @@ import 'v08_screens.dart';
 import 'new_order_screen.dart';
 import 'v09_screens.dart';
 import 'v12_screens.dart';
+import 'v13_screens.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -75,6 +76,20 @@ class OrderDetailScreen extends StatelessWidget {
                 ExportService.printPdf(await ExportService.billPdf(shop: app.shop!, data: d, o: o, roll: false), 'Bill ${o.code}');
               } else if (v == 'tags') {
                 ExportService.printPdf(await ExportService.tagsPdf(shop: app.shop!, data: d, o: o), 'Tags ${o.code}');
+              } else if (v == 'tagskip' && context.mounted) {
+                final ctrl = TextEditingController(text: '0');
+                sheet(context, L(app, 'Partly used sticker sheet', 'आधी इस्तेमाल हुई स्टिकर शीट'), (sc) => Column(children: [
+                      TextField(controller: ctrl, keyboardType: TextInputType.number, decoration: fieldDeco(L(app, 'How many stickers are already used?', 'कितने स्टिकर पहले इस्तेमाल हो चुके?'), icon: Icons.sticky_note_2_outlined)),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () async {
+                          final n = (int.tryParse(ctrl.text.trim()) ?? 0).clamp(0, 60);
+                          Navigator.pop(sc);
+                          ExportService.printPdf(await ExportService.tagsPdf(shop: app.shop!, data: d, o: o, skip: n), 'Tags ${o.code}');
+                        },
+                        child: Text(L(app, 'Print', 'प्रिंट')),
+                      ),
+                    ]));
               } else if (v == 'repeat' && context.mounted) {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => NewOrderScreen(repeatOf: o.id)));
               } else if (v == 'move' && context.mounted) {
@@ -110,6 +125,7 @@ class OrderDetailScreen extends StatelessWidget {
               PopupMenuItem(value: 'share', child: Text(t('shareBillPdf'))),
               PopupMenuItem(value: 'a5', child: Text(t('printA5'))),
               if (app.module('barcode')) PopupMenuItem(value: 'tags', child: Text(t('printTags'))),
+              if (app.module('barcode')) PopupMenuItem(value: 'tagskip', child: Text(L(app, 'Print tags on a used sticker sheet', 'आधी इस्तेमाल शीट पर टैग'))),
               if (app.role != Role.washer && app.role != Role.delivery)
                 PopupMenuItem(value: 'repeat', child: Text(L(app, 'Repeat this order', 'यही ऑर्डर फिर से'))),
               if (app.canManage && o.open && d.branches.length > 1)
@@ -213,6 +229,8 @@ class OrderDetailScreen extends StatelessWidget {
         OrderPhotosCard(orderId: o.id),
         const SizedBox(height: 12),
         OrderOpsCard(orderId: o.id),
+        const SizedBox(height: 12),
+        OrderChatCard(orderId: o.id),
         const SizedBox(height: 12),
         // details
         SectionCard(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../data/shop_v12.dart';
+import '../data/shop_v13.dart';
 import 'package:provider/provider.dart';
 
 import '../data/ops_models.dart';
@@ -286,7 +287,17 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
               ),
               if (_pickup)
                 Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final sl in const ['9–12', '12–3', '3–6', '6–9']) Pill(label: sl, on: _slot == sl, onTap: () => setState(() => _slot = sl)),
+                  for (final sl in const ['9–12', '12–3', '3–6', '6–9'])
+                    Pill(
+                      label: d.slotLimit > 0 ? '$sl (${d.slotBooked(sl)}/${d.slotLimit})' : sl,
+                      on: _slot == sl,
+                      onTap: () {
+                        if (d.slotFull(sl) && !app.isOwner) {
+                          toast(context, L(app, 'This slot is full. Pick another.', 'ये स्लॉट भरा है। दूसरा चुनें।'));
+                          return;
+                        }
+                        setState(() => _slot = sl);
+                      }),
                 ]),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

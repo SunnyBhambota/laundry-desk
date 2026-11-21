@@ -8,6 +8,7 @@ import 'package:laundry_desk/data/reports.dart';
 import 'package:laundry_desk/data/sample_data.dart';
 import 'package:laundry_desk/data/shop_data.dart';
 import 'package:laundry_desk/data/shop_v12.dart';
+import 'package:laundry_desk/data/shop_v13.dart';
 import 'package:laundry_desk/logic/messages.dart';
 import 'package:laundry_desk/models/models.dart';
 import 'package:laundry_desk/services/export_service.dart';
@@ -557,5 +558,37 @@ void main() {
     expect(back.outTo, 'Tailor Raju');
     expect(Customer.fromJson(c.toJson()).walletLog.length, 2);
     expect(d.estimateText(shopName: 'T', currency: 'INR', lines: o.lines, subtotal: 160, express: 0, tax: 0, total: 160, due: DateTime.now()), contains('Total'));
+  });
+
+  test('v0.13: membership, repeat, slot, rack, chat', () async {
+    final shop = ShopProfile(shopName: 'T', services: const ['Wash & fold'], branches: '1', team: '1', country: 'India', currency: 'INR', gst: false);
+    final d = await ShopData.open('t13');
+    await d.initialise(shop);
+    final c = d.addCustomer(name: 'Asha', phone: '9876500000');
+    final plan = PackagePlan(id: 'pp1', name: 'Family 30 kg', service: 'Wash & fold', unit: 'kg', credits: 30, price: 1999);
+    d.packagePlans.add(plan);
+    d.sellPackage(c, plan, by: 'owner', branchId: d.branches.first.id);
+    expect(d.activeMemberships.length, 1);
+    expect(d.membershipsToRenew, isEmpty);
+    c.packages.first.remaining = 3;
+    expect(d.membershipsToRenew.length, 1);
+    expect(d.planOf(c.packages.first), isNotNull);
+    d.setRepeat(c, every: 7, slot: '12–3');
+    expect(d.repeatsDue, isEmpty);
+    c.repeat = {...c.repeat!, 'next': DateTime.now().toIso8601String()};
+    expect(d.repeatsDue.length, 1);
+    d.repeatDone(c);
+    expect(d.repeatsDue, isEmpty);
+    expect(Customer.fromJson(c.toJson()).repeat?['every'], 7);
+    d.slotLimit = 1;
+    expect(d.slotFull('12–3'), isFalse);
+    final o = d.createOrder(customerId: c.id, branchId: d.branches.first.id, lines: [OrderLine(garment: 'Shirt', service: 'Wash & fold', qty: 2, rate: 20)], by: 'owner', slot: '12–3');
+    o.status = 'pickup';
+    expect(d.slotFull('12–3'), isTrue);
+    o.rack = 'A-4';
+    expect(d.rackMap.containsKey(4), isTrue);
+    expect(d.freeRacks.contains(4), isFalse);
+    d.addChat(o, from: 'customer', text: 'Please starch collars', by: 'owner');
+    expect(LaundryOrder.fromJson(o.toJson()).chat.length, 1);
   });
 }

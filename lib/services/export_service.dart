@@ -96,7 +96,7 @@ class ExportService {
   // ---------------- tags ----------------
 
   /// One small label per piece with a QR code (order + piece number).
-  static Future<Uint8List> tagsPdf({required ShopProfile shop, required ShopData data, required LaundryOrder o}) async {
+  static Future<Uint8List> tagsPdf({required ShopProfile shop, required ShopData data, required LaundryOrder o, int skip = 0}) async {
     final c = data.customer(o.customerId);
     final doc = pw.Document(title: 'Tags ${o.code}');
     final pieces = <List<String>>[];
@@ -113,6 +113,8 @@ class ExportService {
       margin: const pw.EdgeInsets.all(18),
       build: (_) => [
         pw.Wrap(spacing: 8, runSpacing: 8, children: [
+          // already used labels of a partly used sticker sheet stay blank
+          for (var k = 0; k < skip; k++) pw.Container(width: 175, height: 58),
           for (final p in pieces)
             pw.Container(
               width: 175,

@@ -22,6 +22,8 @@ import 'v08_screens.dart';
 import 'v09_screens.dart';
 import 'v10_screens.dart';
 import 'v12_screens.dart';
+import 'v13_screens.dart';
+import '../data/shop_v13.dart';
 import '../data/shop_v12.dart';
 
 class MoreScreen extends StatefulWidget {
@@ -137,6 +139,11 @@ class _MoreScreenState extends State<MoreScreen> {
             tile(Icons.dark_mode_outlined, L(app, app.dark ? 'Dark mode: ON (tap for light)' : 'Dark mode: OFF (tap to turn on)', app.dark ? 'डार्क मोड: चालू (लाइट के लिए दबाएँ)' : 'डार्क मोड: बंद (चालू करने के लिए दबाएँ)'), () => app.setDark(!app.dark)),
             if (app.role != Role.delivery && app.role != Role.washer) tile(Icons.north_east_rounded, L(app, 'Outside work (dry cleaner / tailor)', 'बाहर का काम (ड्राई क्लीनर / दर्ज़ी)'), () => go(const OutsideScreen()),
                 sub: d.outsideOrders.isEmpty ? null : '${d.outsideOrders.length} ${L(app, 'outside now', 'अभी बाहर')}'),
+            if (app.role != Role.delivery && app.role != Role.washer) tile(Icons.card_membership_outlined, L(app, 'Memberships (renew)', 'मेंबरशिप (रिन्यू)'), () => go(const MembershipsScreen()),
+                sub: d.membershipsToRenew.isEmpty ? null : '${d.membershipsToRenew.length} ${L(app, 'to renew', 'रिन्यू करने')}'),
+            if (app.role != Role.delivery) tile(Icons.event_repeat_outlined, L(app, 'Regular pickups', 'नियमित पिकअप'), () => go(const RepeatPickupsScreen()),
+                sub: d.repeatsDue.isEmpty ? null : '${d.repeatsDue.length} ${L(app, 'due', 'बाकी')}'),
+            if (app.role != Role.delivery) tile(Icons.view_module_outlined, L(app, 'Racks (free / full)', 'रैक (खाली / भरे)'), () => go(const RackScreen())),
             if (app.canManage) tile(Icons.report_problem_outlined, L(app, 'Damage / loss claims', 'नुकसान / खोने के क्लेम'), () => go(const ClaimsScreen())),
             if (app.canManage) tile(Icons.apartment_outlined, L(app, 'Party bills (hotel / company)', 'पार्टी बिल (होटल / कंपनी)'), () => go(const PartyBillsScreen())),
             if (app.isOwner && !d.hasAlteration) tile(Icons.content_cut_rounded, L(app, 'Add Alteration / tailoring service', 'अल्टरेशन / सिलाई सर्विस जोड़ें'), () => enableAlterationFlow(context, app)),
