@@ -16,11 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  web:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -41,5 +38,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v4
